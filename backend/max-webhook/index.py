@@ -659,7 +659,7 @@ def send_sub_question(sender_id: str, session: dict):
         # Для множественного выбора добавляем галочку к выбранным
         label = sub_opt['label']
         if allow_multiple and sub_opt['value'] in selected_values:
-            label = f"✓ {label}"
+            label = f"✅ {label}"
         
         buttons.append([{
             'type': 'callback',
