@@ -1,0 +1,15 @@
+{
+  "tests": [
+    {
+      "name": "Generate PDF report with valid ID",
+      "method": "GET",
+      "path": "/?id=1",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "pdfUrl": "string",
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Create new diagnostic",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "mechanic": "Подкорытов С.А.",
+        "carNumber": "A159BK124",
+        "mileage": 150000,
+        "diagnosticType": "5min"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "id": "number",
+        "createdAt": "string",
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get all diagnostics",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "partial"
+    }
+  ]
+}

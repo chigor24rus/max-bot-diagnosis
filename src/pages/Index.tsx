@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,11 +22,14 @@ const diagnosticTypes = [
 ];
 
 const Index = () => {
+  const { toast } = useToast();
   const [step, setStep] = useState(0);
   const [mechanic, setMechanic] = useState('');
   const [carNumber, setCarNumber] = useState('');
   const [mileage, setMileage] = useState('');
   const [diagnosticType, setDiagnosticType] = useState('');
+  const [diagnosticId, setDiagnosticId] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const progress = (step / 5) * 100;
 
@@ -50,9 +54,74 @@ const Index = () => {
     }
   };
 
-  const handleDiagnosticTypeSelect = (type: string) => {
+  const handleDiagnosticTypeSelect = async (type: string) => {
     setDiagnosticType(type);
-    setStep(5);
+    setIsLoading(true);
+    
+    try {
+      const response = await fetch('https://functions.poehali.dev/e76024e1-4735-4e57-bf5f-060276b574c8', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          mechanic,
+          carNumber,
+          mileage: parseInt(mileage),
+          diagnosticType: type
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Ошибка при сохранении диагностики');
+      }
+      
+      const data = await response.json();
+      setDiagnosticId(data.id);
+      setStep(5);
+      
+      toast({
+        title: 'Успешно!',
+        description: 'Диагностика сохранена в базу данных'
+      });
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось сохранить диагностику',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleGenerateReport = async () => {
+    if (!diagnosticId) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch(`https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6?id=${diagnosticId}`);
+      
+      if (!response.ok) {
+        throw new Error('Ошибка при генерации отчёта');
+      }
+      
+      const data = await response.json();
+      window.open(data.pdfUrl, '_blank');
+      
+      toast({
+        title: 'Готово!',
+        description: 'PDF отчёт успешно сгенерирован'
+      });
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось создать отчёт',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -315,20 +384,34 @@ const Index = () => {
                   </div>
                 </div>
               </div>
-              <Button 
-                onClick={() => {
-                  setStep(0);
-                  setMechanic('');
-                  setCarNumber('');
-                  setMileage('');
-                  setDiagnosticType('');
-                }}
-                size="lg" 
-                className="w-full text-lg h-12"
-              >
-                <Icon name="Plus" className="mr-2" size={20} />
-                Начать новую диагностику
-              </Button>
+              <div className="space-y-3">
+                <Button 
+                  onClick={handleGenerateReport}
+                  disabled={isLoading || !diagnosticId}
+                  size="lg" 
+                  variant="default"
+                  className="w-full text-lg h-12"
+                >
+                  <Icon name="FileText" className="mr-2" size={20} />
+                  {isLoading ? 'Генерация...' : 'Скачать PDF отчёт'}
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setStep(0);
+                    setMechanic('');
+                    setCarNumber('');
+                    setMileage('');
+                    setDiagnosticType('');
+                    setDiagnosticId(null);
+                  }}
+                  size="lg"
+                  variant="outline" 
+                  className="w-full text-lg h-12"
+                >
+                  <Icon name="Plus" className="mr-2" size={20} />
+                  Начать новую диагностику
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
