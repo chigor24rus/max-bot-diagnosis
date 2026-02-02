@@ -92,10 +92,11 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        requiresPhoto: false,
+        allowMultiple: true,
         subOptions: [
-          { value: 'chips', label: 'Сколы' },
-          { value: 'cracks', label: 'Трещины' },
+          { value: 'chips', label: 'Сколы', requiresPhoto: false },
+          { value: 'cracks', label: 'Трещины', requiresPhoto: false },
         ],
       },
       { value: 'other', label: 'Иное (указать текстом)', requiresText: true },
