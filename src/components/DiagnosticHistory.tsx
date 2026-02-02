@@ -58,14 +58,24 @@ const DiagnosticHistory = () => {
   const handleGenerateReport = async (id: number) => {
     setGeneratingPdfId(id);
     try {
+      console.log('[PDF] Запрос генерации PDF для диагностики:', id);
       const response = await fetch(`https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6?id=${id}`);
+      console.log('[PDF] Статус ответа:', response.status);
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorText = await response.text();
+        console.error('[PDF] Ошибка ответа:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText || 'Ошибка генерации' };
+        }
         throw new Error(errorData.error || 'Ошибка генерации');
       }
       
       const data = await response.json();
+      console.log('[PDF] Данные ответа:', data);
       
       if (!data.pdfUrl) {
         throw new Error('URL PDF не получен');
@@ -88,7 +98,7 @@ const DiagnosticHistory = () => {
         description: 'PDF отчёт открыт в новой вкладке'
       });
     } catch (error) {
-      console.error('PDF generation error:', error);
+      console.error('[PDF] Критическая ошибка:', error);
       toast({
         title: 'Ошибка',
         description: error instanceof Error ? error.message : 'Не удалось создать отчёт',
