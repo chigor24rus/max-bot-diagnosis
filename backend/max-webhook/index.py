@@ -139,6 +139,15 @@ def handle_message(update: dict):
                 handle_phone_auth(sender_id, session, attachment)
                 return
     
+    # Обработка текстового ответа на "Иное (указать текстом)"
+    if session.get('step') == 5 and session.get('waiting_for_text'):
+        if user_text:
+            handle_text_answer(sender_id, session, user_text)
+        else:
+            response_text = '⚠️ Пожалуйста, введите текст или вернитесь назад.'
+            send_message(sender_id, response_text)
+        return
+    
     # Обработка фото в режиме чек-листа
     if session.get('step') == 5 and session.get('waiting_for_photo'):
         if attachments:
@@ -771,6 +780,15 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
             send_checklist_question(sender_id, session)
             return
     
+    # Если выбран "Иное (указать текстом)" - запрашиваем текст
+    if answer_value == 'other':
+        session['waiting_for_text'] = True
+        session['waiting_for_text_question_id'] = question_id
+        save_session(str(sender_id), session)
+        response_text = '✏️ Укажите текстом:'
+        send_message(sender_id, response_text)
+        return
+    
     # Сохраняем обычный ответ без подпунктов
     if answer_value != 'skip':
         success = save_checklist_answer(session['diagnostic_id'], question_id, answer_value)
@@ -825,6 +843,35 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
         session['question_index'] += 1
     
     save_session(str(sender_id), session)
+    
+    send_checklist_question(sender_id, session)
+
+
+def handle_text_answer(sender_id: str, session: dict, user_text: str):
+    '''Обработка текстового ответа на "Иное (указать текстом)"'''
+    question_id = session.get('waiting_for_text_question_id')
+    
+    if not question_id:
+        return
+    
+    # Сохраняем текстовый ответ
+    success = save_checklist_answer(session['diagnostic_id'], question_id, f'Иное: {user_text}')
+    
+    if not success:
+        response_text = '⚠️ Ошибка при сохранении ответа. Попробуйте ещё раз.'
+        send_message(sender_id, response_text)
+        return
+    
+    # Очищаем флаг ожидания текста
+    session['waiting_for_text'] = False
+    session.pop('waiting_for_text_question_id', None)
+    
+    # Переход к следующему вопросу
+    session['question_index'] += 1
+    save_session(str(sender_id), session)
+    
+    response_text = '✅ Ответ сохранён!'
+    send_message(sender_id, response_text)
     
     send_checklist_question(sender_id, session)
 
