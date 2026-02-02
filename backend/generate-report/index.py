@@ -108,6 +108,7 @@ def handler(event: dict, context) -> dict:
             'cracked': 'Треснута',
             'left': 'Слева',
             'right': 'Справа',
+            'center': 'По центру',
             'front-left': 'Передняя левая',
             'front-right': 'Передняя правая',
             'rear-left': 'Задняя левая',
@@ -118,6 +119,11 @@ def handler(event: dict, context) -> dict:
             'battery': 'Батарея',
             'oil': 'Масло',
             'brake': 'Тормоза',
+            'right_mirror': 'Правое зеркало',
+            'left_mirror': 'Левое зеркало',
+            'pressure': 'Давление',
+            'bulges_cuts': 'Грыжи/порезы',
+            'tread': 'Протектор',
         }
         
         def parse_defects(sub_answers):
