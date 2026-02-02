@@ -744,6 +744,7 @@ def finish_sub_questions(sender_id: str, session: dict):
     session.pop('sub_question_mode', None)
     session.pop('sub_question_path', None)
     session.pop('sub_selections', None)
+    save_session(str(sender_id), session)
     
     # Предлагаем прикрепить фото дефекта
     response_text = '✅ Дефект зафиксирован!\n\nХотите прикрепить фото?'
@@ -799,6 +800,7 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
     
     # Если выбран "Неисправно" без подпунктов - предлагаем фото
     if answer_value == 'bad':
+        save_session(str(sender_id), session)
         response_text = '✅ Дефект зафиксирован!\n\nХотите прикрепить фото?'
         buttons = [
             [{'type': 'callback', 'text': '📸 Прикрепить фото', 'payload': 'add_photo'}],
