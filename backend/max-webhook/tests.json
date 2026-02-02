@@ -1,0 +1,42 @@
+{
+  "tests": [
+    {
+      "name": "Test webhook receives message_created event",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "update_type": "message_created",
+        "message": {
+          "chat_id": "test_chat_123",
+          "body": {
+            "text": "/start"
+          }
+        }
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "ok": true
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test webhook receives message_callback event",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "update_type": "message_callback",
+        "callback": {
+          "message": {
+            "chat_id": "test_chat_123"
+          },
+          "payload": "start"
+        }
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "ok": true
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -1,4 +1,6 @@
 {
+  "setup-max-webhook": "https://functions.poehali.dev/8e7d060d-23fb-4628-88e9-e251279d6a28",
+  "max-webhook": "https://functions.poehali.dev/f48b0eea-37b1-4cf5-a470-aa20ae0fd775",
   "generate-report": "https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6",
   "diagnostics": "https://functions.poehali.dev/e76024e1-4735-4e57-bf5f-060276b574c8"
 }
