@@ -62,7 +62,7 @@ const ChecklistWizard = ({ onComplete, onCancel }: ChecklistWizardProps) => {
 
     if (selectedOpt.requiresText && !textInput.trim()) return false;
 
-    if (selectedOpt.subOptions && selectedOpt.subOptions.length > 0) {
+    if (selectedOpt.subOptions && selectedOpt.subOptions.length > 0 && !selectedOpt.allowMultiple) {
       return Object.keys(subSelections).length > 0;
     }
 
