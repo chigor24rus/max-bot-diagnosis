@@ -404,11 +404,56 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'timing_belt', 'label': 'Ремень ГРМ'},
-                        {'value': 'alternator_belt', 'label': 'Ремень генератора'},
-                        {'value': 'power_steering_belt', 'label': 'Ремень ГУР'},
-                        {'value': 'ac_belt', 'label': 'Ремень кондиционера'},
-                        {'value': 'pump_belt', 'label': 'Ремень помпы'},
+                        {
+                            'value': 'timing_belt',
+                            'label': 'Ремень ГРМ',
+                            'subOptions': [
+                                {'value': 'cracks', 'label': 'Трещины'},
+                                {'value': 'peeling', 'label': 'Отслоения'},
+                                {'value': 'oil', 'label': 'Попадания масла'},
+                                {'value': 'missing', 'label': 'Отсутствует'},
+                            ],
+                        },
+                        {
+                            'value': 'alternator_belt',
+                            'label': 'Ремень генератора',
+                            'subOptions': [
+                                {'value': 'cracks', 'label': 'Трещины'},
+                                {'value': 'peeling', 'label': 'Отслоения'},
+                                {'value': 'oil', 'label': 'Попадания масла'},
+                                {'value': 'missing', 'label': 'Отсутствует'},
+                            ],
+                        },
+                        {
+                            'value': 'power_steering_belt',
+                            'label': 'Ремень ГУР',
+                            'subOptions': [
+                                {'value': 'cracks', 'label': 'Трещины'},
+                                {'value': 'peeling', 'label': 'Отслоения'},
+                                {'value': 'oil', 'label': 'Попадания масла'},
+                                {'value': 'missing', 'label': 'Отсутствует'},
+                            ],
+                        },
+                        {
+                            'value': 'ac_belt',
+                            'label': 'Ремень кондиционера',
+                            'subOptions': [
+                                {'value': 'cracks', 'label': 'Трещины'},
+                                {'value': 'peeling', 'label': 'Отслоения'},
+                                {'value': 'oil', 'label': 'Попадания масла'},
+                                {'value': 'missing', 'label': 'Отсутствует'},
+                            ],
+                        },
+                        {
+                            'value': 'pump_belt',
+                            'label': 'Ремень помпы',
+                            'subOptions': [
+                                {'value': 'cracks', 'label': 'Трещины'},
+                                {'value': 'peeling', 'label': 'Отслоения'},
+                                {'value': 'oil', 'label': 'Попадания масла'},
+                                {'value': 'missing', 'label': 'Отсутствует'},
+                            ],
+                        },
                     ],
                 },
                 {'value': 'na', 'label': 'Не предусмотрено'},
