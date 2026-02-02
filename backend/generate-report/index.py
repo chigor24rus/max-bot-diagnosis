@@ -110,7 +110,7 @@ def handler(event: dict, context) -> dict:
         story = []
         styles = getSampleStyleSheet()
         
-        header_img = Image(header_image_path, width=170*mm, height=40*mm)
+        header_img = Image(header_image_path, width=170*mm, height=32*mm)
         story.append(header_img)
         story.append(Spacer(1, 15*mm))
         
