@@ -91,6 +91,21 @@ def handler(event: dict, context) -> dict:
             'createdAt': row[5]
         }
         
+        cur.execute(
+            f"SELECT question_text, answer_value FROM {schema}.checklist_answers "
+            f"WHERE diagnostic_id = {diagnostic_id} ORDER BY question_number"
+        )
+        checklist_rows = cur.fetchall()
+        
+        working_items = []
+        broken_items = []
+        
+        for question, answer in checklist_rows:
+            if answer == 'Исправно':
+                working_items.append(question)
+            elif answer == 'Неисправно':
+                broken_items.append(question)
+        
         font_path = '/tmp/DejaVuSans.ttf'
         
         if not os.path.exists(font_path):
@@ -129,58 +144,69 @@ def handler(event: dict, context) -> dict:
         story.append(Spacer(1, 5*mm))
         
         title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=16,
+            'Title',
             fontName=font_name,
+            fontSize=18,
             alignment=TA_CENTER,
-            spaceAfter=12,
-            textColor=colors.HexColor('#1E5BA8')
+            spaceAfter=10,
+            textColor=colors.HexColor('#1E5BA8'),
+            fontWeight='bold'
         )
         
-        story.append(Paragraph('ОТЧЁТ О ДИАГНОСТИКЕ АВТОМОБИЛЯ', title_style))
+        story.append(Paragraph('Отчет по осмотру автомобиля', title_style))
         story.append(Spacer(1, 8*mm))
-        
-        diagnostic_types = {
-            '5min': '5-ти минутка',
-            'dhch': 'ДХЧ',
-            'des': 'ДЭС'
-        }
         
         krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
         created_at_local = diagnostic_data['createdAt'].astimezone(krasnoyarsk_tz)
         
-        hevsr_green = colors.HexColor('#7AB51D')
-        hevsr_blue = colors.HexColor('#1E5BA8')
+        info_style = ParagraphStyle(
+            'Info',
+            fontName=font_name,
+            fontSize=12,
+            alignment=TA_LEFT,
+            spaceAfter=4,
+            textColor=colors.black
+        )
         
-        data = [
-            ['№ диагностики:', str(diagnostic_data['id'])],
-            ['Дата:', created_at_local.strftime('%d.%m.%Y %H:%M')],
-            ['Механик:', diagnostic_data['mechanic']],
-            ['Госномер:', diagnostic_data['carNumber']],
-            ['Пробег:', f"{diagnostic_data['mileage']:,} км".replace(',', ' ')],
-            ['Тип диагностики:', diagnostic_types.get(diagnostic_data['diagnosticType'], diagnostic_data['diagnosticType'])]
-        ]
+        story.append(Paragraph(f'<b>Дата:</b> {created_at_local.strftime("%d.%m.%Y %H:%M")}', info_style))
+        story.append(Paragraph(f'<b>Механик:</b> {diagnostic_data["mechanic"]}', info_style))
+        story.append(Paragraph(f'<b>Гос.номер:</b> {diagnostic_data["carNumber"]}', info_style))
+        story.append(Paragraph(f'<b>Пробег:</b> {diagnostic_data["mileage"]:,} км'.replace(',', ' '), info_style))
+        story.append(Spacer(1, 8*mm))
         
-        table = Table(data, colWidths=[55*mm, 105*mm])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), hevsr_blue),
-            ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
-            ('TEXTCOLOR', (1, 0), (1, -1), colors.black),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), font_name),
-            ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ('TOPPADDING', (0, 0), (-1, -1), 10),
-            ('LEFTPADDING', (0, 0), (-1, -1), 8),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 1, hevsr_blue),
-            ('LINEWIDTH', (0, 0), (-1, -1), 1.5)
-        ]))
+        section_style = ParagraphStyle(
+            'Section',
+            fontName=font_name,
+            fontSize=14,
+            alignment=TA_LEFT,
+            spaceAfter=6,
+            textColor=colors.HexColor('#1E5BA8'),
+            fontWeight='bold'
+        )
         
-        story.append(table)
-        story.append(Spacer(1, 20*mm))
+        item_style = ParagraphStyle(
+            'Item',
+            fontName=font_name,
+            fontSize=11,
+            alignment=TA_LEFT,
+            spaceAfter=3,
+            textColor=colors.black,
+            leftIndent=10
+        )
+        
+        if working_items:
+            story.append(Paragraph('Проверенные исправные узлы и детали автомобиля', section_style))
+            for item in working_items:
+                story.append(Paragraph(f'• {item}', item_style))
+            story.append(Spacer(1, 6*mm))
+        
+        if broken_items:
+            story.append(Paragraph('Обнаруженные неисправности:', section_style))
+            for item in broken_items:
+                story.append(Paragraph(f'• {item}', item_style))
+            story.append(Spacer(1, 8*mm))
+        
+        story.append(Spacer(1, 10*mm))
         
         signature_style = ParagraphStyle(
             'Signature',
