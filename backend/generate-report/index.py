@@ -100,28 +100,27 @@ def handler(event: dict, context) -> dict:
         pdfmetrics.registerFont(TTFont('DejaVu', font_path))
         font_name = 'DejaVu'
         
-        header_image_path = '/tmp/hevsr_header.png'
-        if not os.path.exists(header_image_path):
-            header_url = 'https://cdn.poehali.dev/projects/4bb6cea8-8d41-426a-b677-f4304502c188/bucket/e0986711-d405-44d1-a66b-83e4a1ba096d.png'
-            urllib.request.urlretrieve(header_url, header_image_path)
+        background_image_path = '/tmp/hevsr_background.png'
+        if not os.path.exists(background_image_path):
+            background_url = 'https://cdn.poehali.dev/projects/4bb6cea8-8d41-426a-b677-f4304502c188/bucket/e0986711-d405-44d1-a66b-83e4a1ba096d.png'
+            urllib.request.urlretrieve(background_url, background_image_path)
         
         pdf_buffer = BytesIO()
         
         page_width, page_height = A4
-        header_height = 100
         
-        def add_header(canvas, doc):
+        def add_background(canvas, doc):
             canvas.saveState()
-            canvas.drawImage(header_image_path, 0, page_height - header_height, 
-                           width=page_width, height=header_height, preserveAspectRatio=True)
+            canvas.drawImage(background_image_path, 0, 0, 
+                           width=page_width, height=page_height, preserveAspectRatio=False, mask='auto')
             canvas.restoreState()
         
         doc = BaseDocTemplate(pdf_buffer, pagesize=A4)
         
-        frame = Frame(20*mm, 15*mm, page_width - 40*mm, page_height - header_height - 30*mm, 
-                     id='normal', topPadding=10*mm)
+        frame = Frame(20*mm, 15*mm, page_width - 40*mm, page_height - 30*mm, 
+                     id='normal', topPadding=50*mm)
         
-        template = PageTemplate(id='header_template', frames=[frame], onPage=add_header)
+        template = PageTemplate(id='background_template', frames=[frame], onPage=add_background)
         doc.addPageTemplates([template])
         
         story = []
