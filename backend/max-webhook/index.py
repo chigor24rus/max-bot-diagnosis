@@ -1009,35 +1009,20 @@ def handle_sub_answer(sender_id: str, session: dict, payload: str):
             sub_selections['main'] = []
         
         # Toggle: если уже выбран - убираем, если нет - добавляем
-        action_label = None
         if sub_value in sub_selections['main']:
             print(f"[DEBUG] Removing {sub_value} from selection")
             sub_selections['main'].remove(sub_value)
             # Удаляем вложенные ответы для этого элемента
             sub_key = f'main-{sub_value}'
             sub_selections.pop(sub_key, None)
-            
-            # Находим label для подтверждения
-            sub_option = next((so for so in main_option['subOptions'] if so['value'] == sub_value), None)
-            if sub_option:
-                action_label = f"❌ Снято: {sub_option['label']}"
         else:
             print(f"[DEBUG] Adding {sub_value} to selection")
             sub_selections['main'].append(sub_value)
-            
-            # Находим label для подтверждения
-            sub_option = next((so for so in main_option['subOptions'] if so['value'] == sub_value), None)
-            if sub_option:
-                action_label = f"✅ Выбрано: {sub_option['label']}"
         
         print(f"[DEBUG] New sub_selections: {sub_selections}")
         session['sub_selections'] = sub_selections
         save_session(str(sender_id), session)
         print(f"[DEBUG] Session saved, calling send_sub_question")
-        
-        # Отправляем краткое подтверждение
-        if action_label:
-            send_message(sender_id, action_label)
         
         # Обновляем список с галочками
         send_sub_question(sender_id, session)
