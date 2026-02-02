@@ -121,9 +121,21 @@ def handler(event: dict, context) -> dict:
             'brake': 'Тормоза',
             'right_mirror': 'Правое зеркало',
             'left_mirror': 'Левое зеркало',
+            'right_main': 'Справа основной',
+            'left_main': 'Слева основной',
+            'right_wing': 'Справа крыло',
+            'left_wing': 'Слева крыло',
             'pressure': 'Давление',
             'bulges_cuts': 'Грыжи/порезы',
+            'valve_cracks': 'Вентиль трещины',
+            'missing_nut': 'Отсутствует гайка колеса',
             'tread': 'Протектор',
+            'timing_belt': 'Ремень ГРМ',
+            'alternator_belt': 'Ремень генератора',
+            'power_steering_belt': 'Ремень ГУР',
+            'ac_belt': 'Ремень кондиционера',
+            'pump_belt': 'Ремень помпы',
+            'peeling': 'Отслоения',
         }
         
         def parse_defects(sub_answers):
