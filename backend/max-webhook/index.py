@@ -287,7 +287,6 @@ def handle_callback(update: dict):
                 session.pop('sub_question_mode', None)
                 session.pop('sub_question_path', None)
                 session.pop('sub_selections', None)
-                session.pop('sub_question_message_id', None)
                 session.pop('waiting_for_photo', None)
                 
                 session['diagnostic_id'] = diagnostic_id
@@ -348,7 +347,6 @@ def handle_callback(update: dict):
         session.pop('sub_question_mode', None)
         session.pop('sub_question_path', None)
         session.pop('sub_selections', None)
-        session.pop('sub_question_message_id', None)
         save_session(str(sender_id), session)
         send_checklist_question(sender_id, session)
     
@@ -682,20 +680,8 @@ def send_sub_question(sender_id: str, session: dict):
         'payload': 'cancel_sub_question'
     }])
     
-    # Если есть сохраненный message_id — обновляем, иначе отправляем новое
-    message_id = session.get('sub_question_message_id')
-    if message_id:
-        result = update_message(sender_id, message_id, response_text, buttons)
-    else:
-        result = send_message(sender_id, response_text, buttons)
-        # Сохраняем message_id для последующих обновлений
-        # API MAX возвращает mid в message.body.mid
-        if result and 'message' in result:
-            mid = result.get('message', {}).get('body', {}).get('mid')
-            if mid:
-                session['sub_question_message_id'] = mid
-                save_session(str(sender_id), session)
-                print(f"[DEBUG] Saved message_id for future updates: {mid}")
+    # Отправляем сообщение (MAX API не поддерживает редактирование inline-клавиатур)
+    send_message(sender_id, response_text, buttons)
 
 
 def send_nested_sub_question(sender_id: str, session: dict, parent_option: dict, parent_value: str):
@@ -728,8 +714,6 @@ def send_nested_sub_question(sender_id: str, session: dict, parent_option: dict,
 
 def finish_sub_questions(sender_id: str, session: dict):
     '''Завершает сбор подпунктов и сохраняет ответ'''
-    # Удаляем сохраненный message_id при выходе из режима подвопросов
-    session.pop('sub_question_message_id', None)
     sub_selections = session.get('sub_selections', {})
     question_index = session.get('question_index', 0)
     questions = get_checklist_questions()
@@ -1237,37 +1221,3 @@ def send_message(user_id: int, text: str, buttons: list = None):
         return {}
 
 
-def update_message(user_id: int, message_id: str, text: str, buttons: list = None):
-    '''Обновление существующего сообщения через MAX API'''
-    
-    token = os.environ.get('MAX_BOT_TOKEN')
-    url = f'https://platform-api.max.ru/messages/{message_id}?user_id={user_id}'
-    
-    payload = {
-        'text': text
-    }
-    
-    if buttons:
-        payload['attachments'] = [{
-            'type': 'inline_keyboard',
-            'payload': {'buttons': buttons}
-        }]
-    
-    headers = {
-        'Authorization': token,
-        'Content-Type': 'application/json'
-    }
-    
-    print(f"[DEBUG] Updating message {message_id} for user_id: {user_id}")
-    print(f"[DEBUG] URL: {url}")
-    print(f"[DEBUG] Payload: {json.dumps(payload, ensure_ascii=False)}")
-    
-    response = requests.patch(url, json=payload, headers=headers)
-    
-    print(f"[DEBUG] Response status: {response.status_code}")
-    print(f"[DEBUG] Response body: {response.text}")
-    
-    try:
-        return response.json()
-    except:
-        return {}
