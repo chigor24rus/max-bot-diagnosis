@@ -92,19 +92,68 @@ def handler(event: dict, context) -> dict:
         }
         
         cur.execute(
-            f"SELECT question_text, answer_value FROM {schema}.checklist_answers "
+            f"SELECT question_text, answer_value, sub_answers FROM {schema}.checklist_answers "
             f"WHERE diagnostic_id = {diagnostic_id} ORDER BY question_number"
         )
         checklist_rows = cur.fetchall()
         
+        defect_labels = {
+            'chips': 'Сколы',
+            'cracks': 'Трещины',
+            'discharged': 'Разряжена',
+            'missing': 'Отсутствует',
+            'damaged': 'Повреждена',
+            'smearing': 'Мажет',
+            'worn': 'Изношена',
+            'cracked': 'Треснута',
+            'left': 'Слева',
+            'right': 'Справа',
+            'front-left': 'Передняя левая',
+            'front-right': 'Передняя правая',
+            'rear-left': 'Задняя левая',
+            'rear-right': 'Задняя правая',
+            'srs': 'SRS',
+            'abs': 'ABS',
+            'engine': 'Двигатель',
+            'battery': 'Батарея',
+            'oil': 'Масло',
+            'brake': 'Тормоза',
+        }
+        
+        def parse_defects(sub_answers):
+            if not sub_answers:
+                return []
+            
+            defects = []
+            main = sub_answers.get('main')
+            
+            if isinstance(main, str):
+                defects.append(defect_labels.get(main, main))
+            elif isinstance(main, list):
+                for item in main:
+                    sub_key = f'main-{item}'
+                    if sub_key in sub_answers:
+                        sub_value = sub_answers[sub_key]
+                        location = defect_labels.get(item, item)
+                        problem = defect_labels.get(sub_value, sub_value)
+                        defects.append(f'{location}: {problem}')
+                    else:
+                        defects.append(defect_labels.get(item, item))
+            
+            return defects
+        
         working_items = []
         broken_items = []
         
-        for question, answer in checklist_rows:
+        for question, answer, sub_answers in checklist_rows:
             if answer == 'Исправно':
                 working_items.append(question)
             elif answer == 'Неисправно':
-                broken_items.append(question)
+                defect_details = parse_defects(sub_answers)
+                if defect_details:
+                    broken_items.append(f'{question}: {", ".join(defect_details)}')
+                else:
+                    broken_items.append(question)
         
         font_path = '/tmp/DejaVuSans.ttf'
         
