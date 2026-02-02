@@ -91,18 +91,13 @@ def handler(event: dict, context) -> dict:
         }
         
         font_path = '/tmp/DejaVuSans.ttf'
-        if not os.path.exists(font_path):
-            font_url = 'https://cdn.jsdelivr.net/gh/dejavu-fonts/dejavu-fonts@master/ttf/DejaVuSans.ttf'
-            try:
-                urllib.request.urlretrieve(font_url, font_path)
-            except:
-                pass
         
-        try:
-            pdfmetrics.registerFont(TTFont('DejaVu', font_path))
-            font_name = 'DejaVu'
-        except:
-            font_name = 'Helvetica'
+        if not os.path.exists(font_path):
+            font_url = 'https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf/DejaVuSans.ttf'
+            urllib.request.urlretrieve(font_url, font_path)
+        
+        pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+        font_name = 'DejaVu'
         
         pdf_buffer = BytesIO()
         doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, topMargin=15*mm, bottomMargin=15*mm)
@@ -146,7 +141,7 @@ def handler(event: dict, context) -> dict:
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTNAME', (0, 0), (-1, -1), font_name),
             ('FONTSIZE', (0, 0), (-1, -1), 11),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
