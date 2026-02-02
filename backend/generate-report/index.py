@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.pdfbase import pdfmetrics
@@ -99,23 +99,33 @@ def handler(event: dict, context) -> dict:
         pdfmetrics.registerFont(TTFont('DejaVu', font_path))
         font_name = 'DejaVu'
         
+        header_image_path = '/tmp/hevsr_header.png'
+        if not os.path.exists(header_image_path):
+            header_url = 'https://cdn.poehali.dev/projects/4bb6cea8-8d41-426a-b677-f4304502c188/bucket/1b4f4332-6d1a-4f46-b4ad-75c0ee2869a8.png'
+            urllib.request.urlretrieve(header_url, header_image_path)
+        
         pdf_buffer = BytesIO()
-        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, topMargin=15*mm, bottomMargin=15*mm)
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, topMargin=10*mm, bottomMargin=15*mm, leftMargin=20*mm, rightMargin=20*mm)
         
         story = []
         styles = getSampleStyleSheet()
         
+        header_img = Image(header_image_path, width=170*mm, height=40*mm)
+        story.append(header_img)
+        story.append(Spacer(1, 15*mm))
+        
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontSize=18,
+            fontSize=16,
             fontName=font_name,
             alignment=TA_CENTER,
-            spaceAfter=20
+            spaceAfter=12,
+            textColor=colors.HexColor('#1E5BA8')
         )
         
         story.append(Paragraph('ОТЧЁТ О ДИАГНОСТИКЕ АВТОМОБИЛЯ', title_style))
-        story.append(Spacer(1, 10*mm))
+        story.append(Spacer(1, 8*mm))
         
         diagnostic_types = {
             '5min': '5-ти минутка',
@@ -126,6 +136,9 @@ def handler(event: dict, context) -> dict:
         krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
         created_at_local = diagnostic_data['createdAt'].astimezone(krasnoyarsk_tz)
         
+        hevsr_green = colors.HexColor('#7AB51D')
+        hevsr_blue = colors.HexColor('#1E5BA8')
+        
         data = [
             ['№ диагностики:', str(diagnostic_data['id'])],
             ['Дата:', created_at_local.strftime('%d.%m.%Y %H:%M')],
@@ -135,38 +148,37 @@ def handler(event: dict, context) -> dict:
             ['Тип диагностики:', diagnostic_types.get(diagnostic_data['diagnosticType'], diagnostic_data['diagnosticType'])]
         ]
         
-        table = Table(data, colWidths=[60*mm, 100*mm])
+        table = Table(data, colWidths=[55*mm, 105*mm])
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('BACKGROUND', (0, 0), (0, -1), hevsr_blue),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
+            ('TEXTCOLOR', (1, 0), (1, -1), colors.black),
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             ('ALIGN', (1, 0), (1, -1), 'LEFT'),
             ('FONTNAME', (0, 0), (-1, -1), font_name),
             ('FONTSIZE', (0, 0), (-1, -1), 11),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, hevsr_blue),
+            ('LINEWIDTH', (0, 0), (-1, -1), 1.5)
         ]))
         
         story.append(table)
-        story.append(Spacer(1, 15*mm))
+        story.append(Spacer(1, 20*mm))
         
-        signature_data = [
-            ['Механик:', '_' * 40],
-            ['', '(подпись)']
-        ]
+        signature_style = ParagraphStyle(
+            'Signature',
+            fontName=font_name,
+            fontSize=11,
+            alignment=TA_LEFT,
+            spaceAfter=3
+        )
         
-        sig_table = Table(signature_data, colWidths=[30*mm, 100*mm])
-        sig_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), font_name),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ('TOPPADDING', (0, 0), (-1, -1), 5)
-        ]))
-        
-        story.append(sig_table)
+        story.append(Paragraph('Механик: __________________________________', signature_style))
+        story.append(Spacer(1, 2*mm))
+        story.append(Paragraph('<font size=9 color="#666666">(подпись)</font>', signature_style))
         
         doc.build(story)
         
