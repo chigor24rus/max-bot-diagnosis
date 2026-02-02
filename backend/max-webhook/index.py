@@ -325,8 +325,27 @@ def handle_callback(update: dict):
         save_session(str(sender_id), session)
         send_checklist_question(sender_id, session)
     
-    elif payload == 'back_to_sub_list':
+    elif payload.startswith('back_to_sub_list'):
         # Возврат к списку подпунктов (из вложенного 3-го уровня)
+        # Если передан parent_value — удаляем этот элемент из выбранных
+        parts = payload.split(':')
+        if len(parts) > 1:
+            parent_value = parts[1]
+            sub_selections = session.get('sub_selections', {})
+            selected = sub_selections.get('main', [])
+            
+            # Удаляем элемент из списка
+            if parent_value in selected:
+                selected.remove(parent_value)
+                sub_selections['main'] = selected
+            
+            # Удаляем вложенный ответ
+            sub_key = f'main-{parent_value}'
+            sub_selections.pop(sub_key, None)
+            
+            session['sub_selections'] = sub_selections
+            save_session(str(sender_id), session)
+        
         send_sub_question(sender_id, session)
     
     elif payload == 'add_photo':
@@ -671,11 +690,11 @@ def send_nested_sub_question(sender_id: str, session: dict, parent_option: dict,
             'payload': f"nested_sub_answer:{question['id']}:{parent_value}:{nested_opt['value']}"
         }])
     
-    # Кнопка «Назад» к выбору подпунктов
+    # Кнопка «Назад» к выбору подпунктов — передаём parent_value для удаления
     buttons.append([{
         'type': 'callback',
         'text': '⬅️ Назад',
-        'payload': 'back_to_sub_list'
+        'payload': f'back_to_sub_list:{parent_value}'
     }])
     
     send_message(sender_id, response_text, buttons)
@@ -977,8 +996,12 @@ def handle_nested_sub_answer(sender_id: str, session: dict, payload: str):
                 if sub_option and 'subOptions' in sub_option:
                     send_nested_sub_question(sender_id, session, sub_option, selected_value)
                     return
+        
+        # Все вложенные подпункты собраны - возвращаемся к списку множественного выбора
+        send_sub_question(sender_id, session)
+        return
     
-    # Все подпункты собраны - завершаем
+    # Одиночный выбор - завершаем
     finish_sub_questions(sender_id, session)
 
 
