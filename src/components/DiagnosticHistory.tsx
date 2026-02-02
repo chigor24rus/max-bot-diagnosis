@@ -59,20 +59,37 @@ const DiagnosticHistory = () => {
       const response = await fetch(`https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6?id=${id}`);
       
       if (!response.ok) {
-        throw new Error('Ошибка генерации');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Ошибка генерации');
       }
       
       const data = await response.json();
-      window.open(data.pdfUrl, '_blank');
+      
+      if (!data.pdfUrl) {
+        throw new Error('URL PDF не получен');
+      }
+      
+      const newWindow = window.open(data.pdfUrl, '_blank');
+      
+      if (!newWindow) {
+        toast({
+          title: 'Внимание',
+          description: 'Разрешите всплывающие окна для открытия PDF',
+          variant: 'default'
+        });
+        window.location.href = data.pdfUrl;
+        return;
+      }
       
       toast({
         title: 'Готово!',
         description: 'PDF отчёт открыт в новой вкладке'
       });
     } catch (error) {
+      console.error('PDF generation error:', error);
       toast({
         title: 'Ошибка',
-        description: 'Не удалось создать отчёт',
+        description: error instanceof Error ? error.message : 'Не удалось создать отчёт',
         variant: 'destructive'
       });
     }
