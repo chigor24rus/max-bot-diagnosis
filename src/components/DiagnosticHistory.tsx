@@ -27,6 +27,7 @@ const DiagnosticHistory = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMechanic, setSelectedMechanic] = useState<string>('');
+  const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
 
   useEffect(() => {
     loadDiagnostics();
@@ -55,6 +56,7 @@ const DiagnosticHistory = () => {
   };
 
   const handleGenerateReport = async (id: number) => {
+    setGeneratingPdfId(id);
     try {
       const response = await fetch(`https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6?id=${id}`);
       
@@ -92,6 +94,8 @@ const DiagnosticHistory = () => {
         description: error instanceof Error ? error.message : 'Не удалось создать отчёт',
         variant: 'destructive'
       });
+    } finally {
+      setGeneratingPdfId(null);
     }
   };
 
@@ -223,10 +227,20 @@ const DiagnosticHistory = () => {
                     onClick={() => handleGenerateReport(diagnostic.id)}
                     variant="outline"
                     size="sm"
-                    className="bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary hover:text-primary"
+                    disabled={generatingPdfId === diagnostic.id}
+                    className="bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary hover:text-primary disabled:opacity-50"
                   >
-                    <Icon name="FileText" size={16} className="mr-2" />
-                    PDF
+                    {generatingPdfId === diagnostic.id ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                        Генерация...
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="FileText" size={16} className="mr-2" />
+                        PDF
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
