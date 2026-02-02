@@ -619,24 +619,40 @@ def finish_checklist(sender_id: str, session: dict):
     '''Завершение чек-листа и генерация отчета'''
     diagnostic_id = session.get('diagnostic_id')
     
-    # Генерируем оба варианта отчёта
     report_url_base = "https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6"
     
     try:
-        # Отчёт без фото
+        # Проверяем наличие фото в БД
+        db_url = os.environ.get('DATABASE_URL')
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        
+        cur.execute(
+            f"SELECT COUNT(*) FROM {schema}.diagnostic_photos WHERE diagnostic_id = {diagnostic_id}"
+        )
+        photo_count = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+        
+        has_photos = photo_count > 0
+        
+        # Генерируем отчёт без фото (всегда)
         response_no_photos = requests.get(f"{report_url_base}?id={diagnostic_id}", timeout=30)
         pdf_url_no_photos = None
         if response_no_photos.status_code == 200:
             result = response_no_photos.json()
             pdf_url_no_photos = result.get('pdfUrl')
         
-        # Отчёт с фото
-        response_with_photos = requests.get(f"{report_url_base}?id={diagnostic_id}&with_photos=true", timeout=30)
+        # Генерируем отчёт с фото только если есть фото
         pdf_url_with_photos = None
-        if response_with_photos.status_code == 200:
-            result = response_with_photos.json()
-            pdf_url_with_photos = result.get('pdfUrl')
+        if has_photos:
+            response_with_photos = requests.get(f"{report_url_base}?id={diagnostic_id}&with_photos=true", timeout=30)
+            if response_with_photos.status_code == 200:
+                result = response_with_photos.json()
+                pdf_url_with_photos = result.get('pdfUrl')
         
+        # Формируем ответ
         if pdf_url_no_photos and pdf_url_with_photos:
             response_text = f'''✅ Диагностика №{diagnostic_id} завершена!
 
@@ -672,6 +688,8 @@ def finish_checklist(sender_id: str, session: dict):
 📋 Чек-лист сохранен, но отчет временно недоступен.'''
     except Exception as e:
         print(f"[ERROR] Failed to generate report: {str(e)}")
+        import traceback
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
         response_text = f'''✅ Диагностика №{diagnostic_id} завершена!
 
 📋 Чек-лист сохранен.'''
