@@ -7,6 +7,7 @@ import base64
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from io import BytesIO
+from checklist_data import get_checklist_questions_full
 
 
 def get_session(user_id: str) -> dict:
@@ -311,6 +312,18 @@ def handle_callback(update: dict):
         # Обработка ответа на вопрос чек-листа
         handle_checklist_answer(sender_id, session, payload)
     
+    elif payload.startswith('sub_answer:'):
+        # Обработка ответа на подвопрос
+        handle_sub_answer(sender_id, session, payload)
+    
+    elif payload.startswith('sub_answer_done:'):
+        # Завершение выбора подпунктов
+        handle_sub_answer_done(sender_id, session, payload)
+    
+    elif payload.startswith('nested_sub_answer:'):
+        # Обработка вложенного подвопроса 3-го уровня
+        handle_nested_sub_answer(sender_id, session, payload)
+    
     elif payload == 'add_photo':
         # Запрос на добавление фото
         session['waiting_for_photo'] = True
@@ -361,68 +374,18 @@ def save_diagnostic(session: dict) -> int:
 
 
 def get_checklist_questions():
-    '''Возвращает список вопросов для чек-листа 5-ти минутки'''
-    return [
-        {'id': 1, 'title': 'Сигнал звукового тона', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 2, 'title': 'Батарейка ключа', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 3, 'title': 'Щетки стеклоочистителя переднего', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 4, 'title': 'Стекло лобовое', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 5, 'title': 'Подсветка приборов', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 6, 'title': 'Лампы неисправностей на панели приборов', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 7, 'title': 'Рамка переднего госномера', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 8, 'title': 'Габариты передние', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 9, 'title': 'Ближний свет', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 10, 'title': 'Дальний свет', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 11, 'title': 'Передние противотуманные фары', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 12, 'title': 'Повороты передние', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 13, 'title': 'Колесо переднее левое', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 14, 'title': 'Колесо заднее левое', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 15, 'title': 'Щетка стеклоочистителя заднего', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 16, 'title': 'Рамка заднего госномера', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 17, 'title': 'Подсветка заднего госномера', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 18, 'title': 'Габариты задние', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 19, 'title': 'Повороты задние', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 20, 'title': 'Стоп сигналы задние', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 21, 'title': 'Сигнал заднего хода', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 22, 'title': 'Задние противотуманные фары', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 23, 'title': 'Колесо заднее правое', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 24, 'title': 'Колесо переднее правое', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
-        {'id': 25, 'title': 'Состояние приводных ремней', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 26, 'title': 'Уровень масла ДВС', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': '50-75', 'label': '50-75%'}, {'value': '75-100', 'label': '75-100%'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 27, 'title': 'Состояние масла ДВС', 'options': [{'value': 'fresh', 'label': 'Свежее'}, {'value': 'working', 'label': 'Рабочее'}, {'value': 'particles', 'label': 'С примесями'}]},
-        {'id': 28, 'title': 'Уровень жидкости ГУР', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': '50-75', 'label': '50-75%'}, {'value': '75-100', 'label': '75-100%'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 29, 'title': 'Состояние жидкости ГУР', 'options': [{'value': 'fresh', 'label': 'Свежее'}, {'value': 'working', 'label': 'Рабочее'}, {'value': 'burnt', 'label': 'Горелое'}]},
-        {'id': 30, 'title': 'Уровень охлаждающей жидкости ДВС', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': 'level', 'label': 'Уровень'}, {'value': 'above', 'label': 'Выше уровня'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 31, 'title': 'Цвет охлаждающей жидкости ДВС', 'options': [{'value': 'red', 'label': 'Красный'}, {'value': 'green', 'label': 'Зеленый'}, {'value': 'blue', 'label': 'Синий'}]},
-        {'id': 32, 'title': 'Состояние охлаждающей жидкости ДВС', 'options': [{'value': 'clean', 'label': 'Чистая'}, {'value': 'cloudy', 'label': 'Мутная'}]},
-        {'id': 33, 'title': 'Температура кристаллизации ОЖ ДВС', 'options': [{'value': '25_35', 'label': '-25-35°С'}, {'value': '35_45', 'label': '-35-45°С'}, {'value': 'more_45', 'label': 'Более -45°С'}]},
-        {'id': 34, 'title': 'Уровень охлаждающей жидкости HV', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': 'level', 'label': 'Уровень'}, {'value': 'above', 'label': 'Выше уровня'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 35, 'title': 'Цвет охлаждающей жидкости HV', 'options': [{'value': 'red', 'label': 'Красный'}, {'value': 'green', 'label': 'Зеленый'}, {'value': 'blue', 'label': 'Синий'}]},
-        {'id': 36, 'title': 'Состояние охлаждающей жидкости HV', 'options': [{'value': 'clean', 'label': 'Чистая'}, {'value': 'cloudy', 'label': 'Мутная'}]},
-        {'id': 37, 'title': 'Температура кристаллизации ОЖ HV', 'options': [{'value': '25_35', 'label': '-25-35°С'}, {'value': '35_45', 'label': '-35-45°С'}, {'value': 'more_45', 'label': 'Более -45°С'}]},
-        {'id': 38, 'title': 'Уровень охлаждающей жидкости турбины', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': 'level', 'label': 'Уровень'}, {'value': 'above', 'label': 'Выше уровня'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 39, 'title': 'Цвет охлаждающей жидкости турбины', 'options': [{'value': 'red', 'label': 'Красный'}, {'value': 'green', 'label': 'Зеленый'}, {'value': 'blue', 'label': 'Синий'}]},
-        {'id': 40, 'title': 'Состояние охлаждающей жидкости турбины', 'options': [{'value': 'clean', 'label': 'Чистая'}, {'value': 'cloudy', 'label': 'Мутная'}]},
-        {'id': 41, 'title': 'Температура кристаллизации ОЖ турбины', 'options': [{'value': '25_35', 'label': '-25-35°С'}, {'value': '35_45', 'label': '-35-45°С'}, {'value': 'more_45', 'label': 'Более -45°С'}]},
-        {'id': 42, 'title': 'Уровень тормозной жидкости', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': 'level', 'label': 'Уровень'}, {'value': 'above', 'label': 'Выше уровня'}]},
-        {'id': 43, 'title': 'Температура кипения тормозной жидкости', 'options': [{'value': 'less_180', 'label': 'Менее 180°С'}, {'value': 'more_180', 'label': 'Более 180°С'}]},
-        {'id': 44, 'title': 'Состояние тормозной жидкости', 'options': [{'value': 'clean', 'label': 'Чистая'}, {'value': 'cloudy', 'label': 'Мутная'}]},
-        {'id': 45, 'title': 'Уровень масла КПП', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': '50-75', 'label': '50-75%'}, {'value': '75-100', 'label': '75-100%'}, {'value': 'need_disassembly', 'label': 'Требуется разбор'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 46, 'title': 'Состояние масла КПП', 'options': [{'value': 'fresh', 'label': 'Свежее'}, {'value': 'working', 'label': 'Рабочее'}, {'value': 'burnt', 'label': 'Горелое'}]},
-        {'id': 47, 'title': 'Омывающая жидкость', 'options': [{'value': 'present', 'label': 'Присутствует'}, {'value': 'missing', 'label': 'Отсутствует'}, {'value': 'frozen', 'label': 'Замерзла'}]},
-        {'id': 48, 'title': 'Работа стартера при запуске ДВС', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 49, 'title': 'Работа ДВС', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 50, 'title': 'Работа КПП', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 51, 'title': 'Течи технических жидкостей', 'options': [{'value': 'no_leaks', 'label': 'Нет течей'}, {'value': 'has_leaks', 'label': 'Есть течи'}]},
-        {'id': 52, 'title': 'Состояние воздушного фильтра', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'need_disassembly', 'label': 'Требуется разбор'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 53, 'title': 'Состояние салонного фильтра', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'need_disassembly', 'label': 'Требуется разбор'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 54, 'title': 'Состояние фильтра ВВБ', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'need_disassembly', 'label': 'Требуется разбор'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
-        {'id': 55, 'title': 'Иные замечания', 'options': [{'value': 'complete', 'label': 'Завершить, замечаний нет'}]},
-    ]
+    '''Возвращает полный список вопросов с подпунктами'''
+    return get_checklist_questions_full()
 
 
 def send_checklist_question(sender_id: str, session: dict):
-    '''Отправляет текущий вопрос чек-листа'''
+    '''Отправляет текущий вопрос чек-листа или подпункты'''
+    
+    # Проверяем, находимся ли мы в режиме подвопросов
+    if session.get('sub_question_mode'):
+        send_sub_question(sender_id, session)
+        return
+    
     questions = get_checklist_questions()
     question_index = session.get('question_index', 0)
     
@@ -455,6 +418,132 @@ def send_checklist_question(sender_id: str, session: dict):
     send_message(sender_id, response_text, buttons)
 
 
+def send_sub_question(sender_id: str, session: dict):
+    '''Отправляет подвопросы (subOptions)'''
+    questions = get_checklist_questions()
+    question_index = session.get('question_index', 0)
+    question = questions[question_index]
+    
+    sub_path = session.get('sub_question_path', [])
+    sub_selections = session.get('sub_selections', {})
+    
+    # Находим текущий уровень subOptions
+    current_option = None
+    for opt in question['options']:
+        if opt['value'] == sub_path[0]:
+            current_option = opt
+            break
+    
+    if not current_option or 'subOptions' not in current_option:
+        # Нет подпунктов - завершаем режим подвопросов
+        finish_sub_questions(sender_id, session)
+        return
+    
+    # Если allowMultiple и уже есть выборы на текущем уровне
+    if current_option.get('allowMultiple') and sub_selections.get('main'):
+        # Проверяем, нужно ли показать вложенные подпункты
+        selected_items = sub_selections.get('main', [])
+        if isinstance(selected_items, list) and len(selected_items) > 0:
+            # Проверяем, есть ли у выбранных элементов свои subOptions
+            for selected_value in selected_items:
+                sub_key = f'main-{selected_value}'
+                if sub_key not in sub_selections:
+                    # Нужно показать подпункты для этого элемента
+                    sub_option = next((so for so in current_option['subOptions'] if so['value'] == selected_value), None)
+                    if sub_option and 'subOptions' in sub_option:
+                        send_nested_sub_question(sender_id, session, sub_option, selected_value)
+                        return
+            
+            # Все подпункты собраны - завершаем
+            finish_sub_questions(sender_id, session)
+            return
+    
+    # Показываем подпункты первого уровня
+    allow_multiple = current_option.get('allowMultiple', False)
+    
+    if allow_multiple:
+        response_text = f'''📋 Уточните неисправности:
+
+{question['title']}
+
+(Можно выбрать несколько)'''
+    else:
+        response_text = f'''📋 Уточните неисправность:
+
+{question['title']}'''
+    
+    buttons = []
+    for sub_opt in current_option['subOptions']:
+        buttons.append([{
+            'type': 'callback',
+            'text': sub_opt['label'],
+            'payload': f"sub_answer:{question['id']}:{sub_opt['value']}"
+        }])
+    
+    # Кнопка завершения для множественного выбора
+    if allow_multiple and sub_selections.get('main'):
+        buttons.append([{
+            'type': 'callback',
+            'text': '✅ Готово',
+            'payload': f"sub_answer_done:{question['id']}"
+        }])
+    
+    send_message(sender_id, response_text, buttons)
+
+
+def send_nested_sub_question(sender_id: str, session: dict, parent_option: dict, parent_value: str):
+    '''Отправляет вложенные подпункты 3-го уровня'''
+    questions = get_checklist_questions()
+    question_index = session.get('question_index', 0)
+    question = questions[question_index]
+    
+    response_text = f'''📋 Уточните проблему:
+
+{parent_option['label']}'''
+    
+    buttons = []
+    for nested_opt in parent_option['subOptions']:
+        buttons.append([{
+            'type': 'callback',
+            'text': nested_opt['label'],
+            'payload': f"nested_sub_answer:{question['id']}:{parent_value}:{nested_opt['value']}"
+        }])
+    
+    send_message(sender_id, response_text, buttons)
+
+
+def finish_sub_questions(sender_id: str, session: dict):
+    '''Завершает сбор подпунктов и сохраняет ответ'''
+    sub_selections = session.get('sub_selections', {})
+    question_index = session.get('question_index', 0)
+    questions = get_checklist_questions()
+    question = questions[question_index]
+    
+    # Сохраняем ответ с подпунктами
+    success = save_checklist_answer_with_subs(
+        session['diagnostic_id'], 
+        question['id'], 
+        'bad',  # Основной ответ всегда "Неисправно"
+        sub_selections
+    )
+    
+    if not success:
+        response_text = '⚠️ Ошибка при сохранении ответа. Попробуйте ещё раз.'
+        send_message(sender_id, response_text)
+        return
+    
+    # Очищаем режим подвопросов
+    session.pop('sub_question_mode', None)
+    session.pop('sub_question_path', None)
+    session.pop('sub_selections', None)
+    
+    # Переход к следующему вопросу
+    session['question_index'] += 1
+    save_session(str(sender_id), session)
+    
+    send_checklist_question(sender_id, session)
+
+
 def handle_checklist_answer(sender_id: str, session: dict, payload: str):
     '''Обработка ответа на вопрос чек-листа'''
     # Парсим payload: "answer:question_id:value"
@@ -465,11 +554,27 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
     question_id = int(parts[1])
     answer_value = parts[2]
     
-    # Сохраняем ответ в БД
+    # Проверяем, есть ли у выбранного ответа подпункты
+    questions = get_checklist_questions()
+    question = next((q for q in questions if q['id'] == question_id), None)
+    
+    if question:
+        selected_option = next((opt for opt in question['options'] if opt['value'] == answer_value), None)
+        
+        # Если у ответа есть подпункты - переходим в режим подвопросов
+        if selected_option and 'subOptions' in selected_option:
+            session['sub_question_mode'] = True
+            session['sub_question_path'] = [answer_value]
+            session['sub_selections'] = {}
+            save_session(str(sender_id), session)
+            send_checklist_question(sender_id, session)
+            return
+    
+    # Сохраняем обычный ответ без подпунктов
     if answer_value != 'skip':
         success = save_checklist_answer(session['diagnostic_id'], question_id, answer_value)
         if not success:
-            response_text = '⚠️ Ошибка при сохранении ответа. Попробуйте ещё раз или нажмите "Пропустить".'
+            response_text = '⚠️ Ошибка при сохранении ответа. Попробуйте ещё раз.'
             send_message(sender_id, response_text)
             return
     
@@ -560,8 +665,125 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list):
         send_message(sender_id, response_text, buttons)
 
 
+def handle_sub_answer(sender_id: str, session: dict, payload: str):
+    '''Обработка ответа на подвопрос'''
+    # Парсим payload: "sub_answer:question_id:value"
+    parts = payload.split(':')
+    if len(parts) < 3:
+        return
+    
+    question_id = int(parts[1])
+    sub_value = parts[2]
+    
+    questions = get_checklist_questions()
+    question = next((q for q in questions if q['id'] == question_id), None)
+    if not question:
+        return
+    
+    # Получаем текущую выбранную опцию
+    sub_path = session.get('sub_question_path', [])
+    if not sub_path:
+        return
+    
+    main_option = next((opt for opt in question['options'] if opt['value'] == sub_path[0]), None)
+    if not main_option:
+        return
+    
+    sub_selections = session.get('sub_selections', {})
+    
+    # Если allowMultiple - добавляем в список
+    if main_option.get('allowMultiple'):
+        if 'main' not in sub_selections:
+            sub_selections['main'] = []
+        
+        # Проверяем, не выбран ли уже этот элемент
+        if sub_value not in sub_selections['main']:
+            sub_selections['main'].append(sub_value)
+        
+        session['sub_selections'] = sub_selections
+        save_session(str(sender_id), session)
+        
+        # Проверяем, есть ли у выбранного элемента свои subOptions
+        sub_option = next((so for so in main_option['subOptions'] if so['value'] == sub_value), None)
+        if sub_option and 'subOptions' in sub_option:
+            # Показываем вложенные подпункты
+            send_nested_sub_question(sender_id, session, sub_option, sub_value)
+        else:
+            # Показываем текущий список снова с кнопкой "Готово"
+            send_sub_question(sender_id, session)
+    else:
+        # Одиночный выбор
+        sub_selections['main'] = sub_value
+        session['sub_selections'] = sub_selections
+        save_session(str(sender_id), session)
+        
+        # Проверяем вложенные subOptions
+        sub_option = next((so for so in main_option['subOptions'] if so['value'] == sub_value), None)
+        if sub_option and 'subOptions' in sub_option:
+            send_nested_sub_question(sender_id, session, sub_option, sub_value)
+        else:
+            # Завершаем сбор подпунктов
+            finish_sub_questions(sender_id, session)
+
+
+def handle_sub_answer_done(sender_id: str, session: dict, payload: str):
+    '''Обработка завершения выбора подпунктов'''
+    finish_sub_questions(sender_id, session)
+
+
+def handle_nested_sub_answer(sender_id: str, session: dict, payload: str):
+    '''Обработка вложенного ответа 3-го уровня'''
+    # Парсим payload: "nested_sub_answer:question_id:parent_value:nested_value"
+    parts = payload.split(':')
+    if len(parts) < 4:
+        return
+    
+    question_id = int(parts[1])
+    parent_value = parts[2]
+    nested_value = parts[3]
+    
+    sub_selections = session.get('sub_selections', {})
+    
+    # Сохраняем вложенный ответ с ключом вида "main-parent_value"
+    sub_key = f'main-{parent_value}'
+    sub_selections[sub_key] = nested_value
+    
+    session['sub_selections'] = sub_selections
+    save_session(str(sender_id), session)
+    
+    # Проверяем, нужно ли показать подпункты для других выбранных элементов
+    questions = get_checklist_questions()
+    question = next((q for q in questions if q['id'] == question_id), None)
+    if not question:
+        finish_sub_questions(sender_id, session)
+        return
+    
+    sub_path = session.get('sub_question_path', [])
+    main_option = next((opt for opt in question['options'] if opt['value'] == sub_path[0]), None)
+    
+    if main_option and main_option.get('allowMultiple'):
+        # Проверяем остальные выбранные элементы
+        selected_items = sub_selections.get('main', [])
+        for selected_value in selected_items:
+            sub_key = f'main-{selected_value}'
+            if sub_key not in sub_selections:
+                # Нужно показать подпункты для этого элемента
+                sub_option = next((so for so in main_option['subOptions'] if so['value'] == selected_value), None)
+                if sub_option and 'subOptions' in sub_option:
+                    send_nested_sub_question(sender_id, session, sub_option, selected_value)
+                    return
+    
+    # Все подпункты собраны - завершаем
+    finish_sub_questions(sender_id, session)
+
+
 def save_checklist_answer(diagnostic_id: int, question_number: int, answer_value: str) -> bool:
-    '''Сохранение ответа на вопрос чек-листа в БД'''
+    '''Сохранение ответа на вопрос чек-листа в БД (без подпунктов)'''
+    return save_checklist_answer_with_subs(diagnostic_id, question_number, answer_value, None)
+
+
+def save_checklist_answer_with_subs(diagnostic_id: int, question_number: int, answer_value: str, sub_answers: dict) -> bool:
+    '''Сохранение ответа на вопрос чек-листа в БД с подпунктами'''
     try:
         db_url = os.environ.get('DATABASE_URL')
         schema = os.environ.get('MAIN_DB_SCHEMA')
@@ -596,10 +818,18 @@ def save_checklist_answer(diagnostic_id: int, question_number: int, answer_value
             option = next((opt for opt in question['options'] if opt['value'] == answer_value), None)
             answer_val = option['label'] if option else answer_value
         
-        cur.execute(
-            f"INSERT INTO {schema}.checklist_answers (diagnostic_id, question_number, question_text, answer_type, answer_value) "
-            f"VALUES ({diagnostic_id}, {question_number}, '{question_text}', 'single', '{answer_val}')"
-        )
+        # Формируем SQL с sub_answers
+        if sub_answers:
+            sub_answers_json = json.dumps(sub_answers, ensure_ascii=False).replace("'", "''")
+            cur.execute(
+                f"INSERT INTO {schema}.checklist_answers (diagnostic_id, question_number, question_text, answer_type, answer_value, sub_answers) "
+                f"VALUES ({diagnostic_id}, {question_number}, '{question_text}', 'single', '{answer_val}', '{sub_answers_json}'::jsonb)"
+            )
+        else:
+            cur.execute(
+                f"INSERT INTO {schema}.checklist_answers (diagnostic_id, question_number, question_text, answer_type, answer_value) "
+                f"VALUES ({diagnostic_id}, {question_number}, '{question_text}', 'single', '{answer_val}')"
+            )
         
         conn.commit()
         cur.close()
