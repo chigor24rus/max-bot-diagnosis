@@ -6,7 +6,8 @@ from zoneinfo import ZoneInfo
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak, Frame, PageTemplate, BaseDocTemplate
+from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.pdfbase import pdfmetrics
@@ -101,18 +102,32 @@ def handler(event: dict, context) -> dict:
         
         header_image_path = '/tmp/hevsr_header.png'
         if not os.path.exists(header_image_path):
-            header_url = 'https://cdn.poehali.dev/projects/4bb6cea8-8d41-426a-b677-f4304502c188/bucket/1b4f4332-6d1a-4f46-b4ad-75c0ee2869a8.png'
+            header_url = 'https://cdn.poehali.dev/projects/4bb6cea8-8d41-426a-b677-f4304502c188/bucket/c05eb0e1-e779-4faf-b40c-632733644c8d.png'
             urllib.request.urlretrieve(header_url, header_image_path)
         
         pdf_buffer = BytesIO()
-        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, topMargin=10*mm, bottomMargin=15*mm, leftMargin=20*mm, rightMargin=20*mm)
+        
+        page_width, page_height = A4
+        header_height = 100
+        
+        def add_header(canvas, doc):
+            canvas.saveState()
+            canvas.drawImage(header_image_path, 0, page_height - header_height, 
+                           width=page_width, height=header_height, preserveAspectRatio=True)
+            canvas.restoreState()
+        
+        doc = BaseDocTemplate(pdf_buffer, pagesize=A4)
+        
+        frame = Frame(20*mm, 15*mm, page_width - 40*mm, page_height - header_height - 30*mm, 
+                     id='normal', topPadding=10*mm)
+        
+        template = PageTemplate(id='header_template', frames=[frame], onPage=add_header)
+        doc.addPageTemplates([template])
         
         story = []
         styles = getSampleStyleSheet()
         
-        header_img = Image(header_image_path, width=170*mm, height=32*mm)
-        story.append(header_img)
-        story.append(Spacer(1, 15*mm))
+        story.append(Spacer(1, 5*mm))
         
         title_style = ParagraphStyle(
             'CustomTitle',
