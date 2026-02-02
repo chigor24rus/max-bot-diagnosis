@@ -621,11 +621,9 @@ def send_checklist_question(sender_id: str, session: dict):
 
 def send_sub_question(sender_id: str, session: dict):
     '''Отправляет подвопросы (subOptions)'''
-    print(f"[DEBUG] send_sub_question called")
     questions = get_checklist_questions()
     question_index = session.get('question_index', 0)
     question = questions[question_index]
-    print(f"[DEBUG] Current question: {question['title']}, index: {question_index}")
     
     sub_path = session.get('sub_question_path', [])
     sub_selections = session.get('sub_selections', {})
@@ -962,67 +960,46 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list):
 
 def handle_sub_answer(sender_id: str, session: dict, payload: str):
     '''Обработка ответа на подвопрос'''
-    print(f"[DEBUG] handle_sub_answer called with payload: {payload}")
-    print(f"[DEBUG] Session state: question_index={session.get('question_index')}, sub_question_mode={session.get('sub_question_mode')}")
-    print(f"[DEBUG] sub_question_path={session.get('sub_question_path')}, sub_selections={session.get('sub_selections')}")
-    
     # Парсим payload: "sub_answer:question_id:value"
     parts = payload.split(':')
     if len(parts) < 3:
-        print(f"[ERROR] Invalid payload format: {payload}")
         return
     
     question_id = int(parts[1])
     sub_value = parts[2]
-    print(f"[DEBUG] Parsed: question_id={question_id}, sub_value={sub_value}")
     
     questions = get_checklist_questions()
     question = next((q for q in questions if q['id'] == question_id), None)
     if not question:
-        print(f"[ERROR] Question {question_id} not found")
         return
-    
-    print(f"[DEBUG] Found question: {question['title']}")
     
     # Получаем текущую выбранную опцию
     sub_path = session.get('sub_question_path', [])
     if not sub_path:
-        print(f"[ERROR] sub_question_path is empty")
         return
-    
-    print(f"[DEBUG] sub_path: {sub_path}")
     
     main_option = next((opt for opt in question['options'] if opt['value'] == sub_path[0]), None)
     if not main_option:
-        print(f"[ERROR] Main option {sub_path[0]} not found")
         return
     
-    print(f"[DEBUG] Found main_option: {main_option.get('label')}, allowMultiple={main_option.get('allowMultiple')}")
-    
     sub_selections = session.get('sub_selections', {})
-    print(f"[DEBUG] Current sub_selections: {sub_selections}")
     
     # Если allowMultiple - добавляем/убираем из списка (toggle)
     if main_option.get('allowMultiple'):
-        print(f"[DEBUG] Multiple selection mode")
         if 'main' not in sub_selections:
             sub_selections['main'] = []
         
         # Toggle: если уже выбран - убираем, если нет - добавляем
         if sub_value in sub_selections['main']:
-            print(f"[DEBUG] Removing {sub_value} from selection")
             sub_selections['main'].remove(sub_value)
             # Удаляем вложенные ответы для этого элемента
             sub_key = f'main-{sub_value}'
             sub_selections.pop(sub_key, None)
         else:
-            print(f"[DEBUG] Adding {sub_value} to selection")
             sub_selections['main'].append(sub_value)
         
-        print(f"[DEBUG] New sub_selections: {sub_selections}")
         session['sub_selections'] = sub_selections
         save_session(str(sender_id), session)
-        print(f"[DEBUG] Session saved, calling send_sub_question")
         
         # Обновляем список с галочками
         send_sub_question(sender_id, session)
