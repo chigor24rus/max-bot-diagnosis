@@ -153,13 +153,22 @@ def handle_message(update: dict):
     
     # Команды
     if lower_text in ['/start', 'начать', 'старт']:
-        session = {'step': 1}
-        save_session(str(sender_id), session)
-        response_text = '👋 Привет! Я HEVSR Diagnostics bot.\n\nДля начала работы поделитесь своим номером телефона:'
-        buttons = [
-            [{'type': 'request_contact', 'text': '📱 Отправить номер телефона'}]
-        ]
-        send_message(sender_id, response_text, buttons)
+        # Проверяем, авторизован ли пользователь
+        if session.get('user_id') and session.get('phone'):
+            # Уже авторизован - сразу начинаем диагностику с госномера
+            session['step'] = 2
+            save_session(str(sender_id), session)
+            response_text = f'👋 С возвращением, {session.get("user_name", "")}!\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
+            send_message(sender_id, response_text)
+        else:
+            # Не авторизован - запрашиваем телефон
+            session = {'step': 1}
+            save_session(str(sender_id), session)
+            response_text = '👋 Привет! Я HEVSR Diagnostics bot.\n\nДля начала работы поделитесь своим номером телефона:'
+            buttons = [
+                [{'type': 'request_contact', 'text': '📱 Отправить номер телефона'}]
+            ]
+            send_message(sender_id, response_text, buttons)
         return
     
     elif lower_text in ['/help', 'помощь']:
@@ -247,13 +256,22 @@ def handle_callback(update: dict):
     session = get_session(str(sender_id))
     
     if payload == 'start':
-        session = {'step': 1}
-        save_session(str(sender_id), session)
-        response_text = '👋 Отлично! Для начала работы поделитесь своим номером телефона:'
-        buttons = [
-            [{'type': 'request_contact', 'text': '📱 Отправить номер телефона'}]
-        ]
-        send_message(sender_id, response_text, buttons)
+        # Проверяем, авторизован ли пользователь
+        if session.get('user_id') and session.get('phone'):
+            # Уже авторизован - сразу начинаем диагностику с госномера
+            session['step'] = 2
+            save_session(str(sender_id), session)
+            response_text = f'👋 Отлично! Введите госномер автомобиля.\n\nНапример: A159BK124'
+            send_message(sender_id, response_text)
+        else:
+            # Не авторизован - запрашиваем телефон
+            session = {'step': 1}
+            save_session(str(sender_id), session)
+            response_text = '👋 Отлично! Для начала работы поделитесь своим номером телефона:'
+            buttons = [
+                [{'type': 'request_contact', 'text': '📱 Отправить номер телефона'}]
+            ]
+            send_message(sender_id, response_text, buttons)
     
     elif payload.startswith('type:'):
         diagnostic_type = payload.replace('type:', '')
