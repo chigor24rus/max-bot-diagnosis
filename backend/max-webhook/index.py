@@ -349,6 +349,34 @@ def handle_callback(update: dict):
         session['waiting_for_photo'] = False
         save_session(str(sender_id), session)
         send_checklist_question(sender_id, session)
+    
+    elif payload == 'previous_question':
+        # Возврат к предыдущему вопросу
+        question_index = session.get('question_index', 0)
+        if question_index > 0:
+            # Удаляем предыдущий ответ из БД
+            questions = get_checklist_questions()
+            prev_question = questions[question_index - 1]
+            
+            try:
+                db_url = os.environ.get('DATABASE_URL')
+                schema = os.environ.get('MAIN_DB_SCHEMA')
+                conn = psycopg2.connect(db_url)
+                cur = conn.cursor()
+                
+                cur.execute(
+                    f"DELETE FROM {schema}.checklist_answers "
+                    f"WHERE diagnostic_id = {session['diagnostic_id']} AND question_number = {prev_question['id']}"
+                )
+                conn.commit()
+                cur.close()
+                conn.close()
+            except Exception as e:
+                print(f"[ERROR] Failed to delete previous answer: {str(e)}")
+            
+            session['question_index'] = question_index - 1
+            save_session(str(sender_id), session)
+            send_checklist_question(sender_id, session)
 
 
 def save_diagnostic(session: dict) -> int:
@@ -426,6 +454,10 @@ def send_checklist_question(sender_id: str, session: dict):
     has_bad_option = any(opt['value'] == 'bad' for opt in question['options'])
     if has_bad_option:
         buttons.append([{'type': 'callback', 'text': '📸 Прикрепить фото дефекта', 'payload': 'add_photo'}])
+    
+    # Кнопка "Назад" (если это не первый вопрос)
+    if question_index > 0:
+        buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'previous_question'}])
     
     send_message(sender_id, response_text, buttons)
 
@@ -743,15 +775,8 @@ def handle_sub_answer(sender_id: str, session: dict, payload: str):
         session['sub_selections'] = sub_selections
         save_session(str(sender_id), session)
         
-        # Если элемент только что выбран и у него есть subOptions
-        if sub_value in sub_selections['main']:
-            sub_option = next((so for so in main_option['subOptions'] if so['value'] == sub_value), None)
-            if sub_option and 'subOptions' in sub_option:
-                # Показываем вложенные подпункты
-                send_nested_sub_question(sender_id, session, sub_option, sub_value)
-                return
-        
-        # Показываем текущий список снова
+        # НЕ переходим автоматически к вложенным подпунктам
+        # Пользователь должен нажать "Готово", чтобы продолжить
         send_sub_question(sender_id, session)
     else:
         # Одиночный выбор
