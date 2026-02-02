@@ -148,7 +148,7 @@ const DiagnosticHistory = () => {
                   size="sm"
                   className={selectedMechanic === mechanic ? '' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'}
                 >
-                  {mechanic.split(' ')[0]}
+                  {mechanic}
                 </Button>
               ))}
             </div>
