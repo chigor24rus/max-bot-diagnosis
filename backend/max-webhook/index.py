@@ -461,7 +461,11 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
     
     # Сохраняем ответ в БД
     if answer_value != 'skip':
-        save_checklist_answer(session['diagnostic_id'], question_id, answer_value)
+        success = save_checklist_answer(session['diagnostic_id'], question_id, answer_value)
+        if not success:
+            response_text = '⚠️ Ошибка при сохранении ответа. Попробуйте ещё раз или нажмите "Пропустить".'
+            send_message(sender_id, response_text)
+            return
     
     # Переход к следующему вопросу
     session['question_index'] += 1
@@ -550,7 +554,7 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list):
         send_message(sender_id, response_text, buttons)
 
 
-def save_checklist_answer(diagnostic_id: int, question_number: int, answer_value: str):
+def save_checklist_answer(diagnostic_id: int, question_number: int, answer_value: str) -> bool:
     '''Сохранение ответа на вопрос чек-листа в БД'''
     try:
         db_url = os.environ.get('DATABASE_URL')
@@ -563,7 +567,8 @@ def save_checklist_answer(diagnostic_id: int, question_number: int, answer_value
         question = next((q for q in questions if q['id'] == question_number), None)
         
         if not question:
-            return
+            print(f"[ERROR] Question {question_number} not found")
+            return False
         
         question_text = question['title']
         
@@ -586,8 +591,8 @@ def save_checklist_answer(diagnostic_id: int, question_number: int, answer_value
             answer_val = option['label'] if option else answer_value
         
         cur.execute(
-            f"INSERT INTO {schema}.checklist_answers (diagnostic_id, question_number, question_text, answer_value) "
-            f"VALUES ({diagnostic_id}, {question_number}, '{question_text}', '{answer_val}')"
+            f"INSERT INTO {schema}.checklist_answers (diagnostic_id, question_number, question_text, answer_type, answer_value) "
+            f"VALUES ({diagnostic_id}, {question_number}, '{question_text}', 'single', '{answer_val}')"
         )
         
         conn.commit()
@@ -595,9 +600,13 @@ def save_checklist_answer(diagnostic_id: int, question_number: int, answer_value
         conn.close()
         
         print(f"[SUCCESS] Saved answer for question {question_number}")
+        return True
     
     except Exception as e:
         print(f"[ERROR] Failed to save checklist answer: {str(e)}")
+        import traceback
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
+        return False
 
 
 def finish_checklist(sender_id: str, session: dict):
