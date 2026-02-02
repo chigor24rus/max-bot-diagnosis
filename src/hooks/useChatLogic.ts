@@ -231,7 +231,7 @@ export const useChatLogic = () => {
     
     if (lowerText === '/start' || lowerText.includes('начать') || lowerText.includes('осмотр')) {
       setCurrentStep(1);
-      addBotMessage('Отлично! Выберите механика, который проводит диагностику:', mechanics);
+      addBotMessage('Ты кто?', mechanics);
     }
     else if (lowerText === '/help' || lowerText.includes('помощь') || lowerText.includes('команды')) {
       addBotMessage(

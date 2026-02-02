@@ -148,7 +148,7 @@ def handle_message(update: dict):
     if lower_text in ['/start', 'начать', 'старт']:
         session = {'step': 1}
         save_session(str(sender_id), session)
-        response_text = '👋 Привет! Я HEVSR Diagnostics bot.\n\nВыберите механика для диагностики:'
+        response_text = '👋 Привет! Я HEVSR Diagnostics bot.\n\nТы кто?'
         buttons = [
             [{'type': 'callback', 'text': 'Подкорытов С.А.', 'payload': 'mechanic:Подкорытов С.А.'}],
             [{'type': 'callback', 'text': 'Костенко В.Ю.', 'payload': 'mechanic:Костенко В.Ю.'}],
@@ -245,7 +245,7 @@ def handle_callback(update: dict):
     if payload == 'start':
         session = {'step': 1}
         save_session(str(sender_id), session)
-        response_text = '👋 Отлично! Выберите механика:'
+        response_text = '👋 Отлично! Ты кто?'
         buttons = [
             [{'type': 'callback', 'text': 'Подкорытов С.А.', 'payload': 'mechanic:Подкорытов С.А.'}],
             [{'type': 'callback', 'text': 'Костенко В.Ю.', 'payload': 'mechanic:Костенко В.Ю.'}],
