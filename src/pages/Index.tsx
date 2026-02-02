@@ -1,11 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Progress } from '@/components/ui/progress';
 import Icon from '@/components/ui/icon';
 
 const mechanics = [
@@ -21,43 +18,139 @@ const diagnosticTypes = [
   { value: 'des', label: 'ДЭС' }
 ];
 
+type Message = {
+  id: number;
+  type: 'bot' | 'user';
+  text: string;
+  buttons?: string[];
+  isInput?: boolean;
+  inputType?: 'text' | 'number';
+  inputPlaceholder?: string;
+};
+
 const Index = () => {
   const { toast } = useToast();
-  const [step, setStep] = useState(0);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 0,
+      type: 'bot',
+      text: '👋 Привет! Я бот МАХ — ваш помощник для проведения диагностики автомобилей.\n\nНажмите кнопку ниже, чтобы начать осмотр.',
+      buttons: ['Начать осмотр автомобиля']
+    }
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const [currentStep, setCurrentStep] = useState(0);
   const [mechanic, setMechanic] = useState('');
   const [carNumber, setCarNumber] = useState('');
   const [mileage, setMileage] = useState('');
   const [diagnosticType, setDiagnosticType] = useState('');
   const [diagnosticId, setDiagnosticId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [waitingForInput, setWaitingForInput] = useState(false);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const progress = (step / 5) * 100;
-
-  const handleStart = () => {
-    setStep(1);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleMechanicSelect = (selectedMechanic: string) => {
-    setMechanic(selectedMechanic);
-    setStep(2);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const addBotMessage = (text: string, buttons?: string[], isInput = false, inputType?: 'text' | 'number', inputPlaceholder?: string) => {
+    setTimeout(() => {
+      setMessages(prev => [...prev, {
+        id: prev.length,
+        type: 'bot',
+        text,
+        buttons,
+        isInput,
+        inputType,
+        inputPlaceholder
+      }]);
+      if (isInput) {
+        setWaitingForInput(true);
+      }
+    }, 500);
   };
 
-  const handleCarNumberSubmit = () => {
-    if (carNumber.trim()) {
-      setStep(3);
+  const addUserMessage = (text: string) => {
+    setMessages(prev => [...prev, {
+      id: prev.length,
+      type: 'user',
+      text
+    }]);
+  };
+
+  const handleButtonClick = (buttonText: string) => {
+    if (isLoading) return;
+    
+    addUserMessage(buttonText);
+
+    if (buttonText === 'Начать осмотр автомобиля') {
+      setCurrentStep(1);
+      addBotMessage('Выберите механика, который проводит диагностику:', mechanics);
+    } else if (mechanics.includes(buttonText)) {
+      setMechanic(buttonText);
+      setCurrentStep(2);
+      addBotMessage(
+        'Отлично! Теперь введите государственный номер автомобиля в латинице.\n\nНапример: A159BK124',
+        undefined,
+        true,
+        'text',
+        'A159BK124'
+      );
+    } else if (diagnosticTypes.map(d => d.label).includes(buttonText)) {
+      const selectedType = diagnosticTypes.find(d => d.label === buttonText);
+      if (selectedType) {
+        setDiagnosticType(selectedType.value);
+        saveDiagnostic(selectedType.value);
+      }
+    } else if (buttonText === 'Скачать PDF отчёт') {
+      handleGenerateReport();
+    } else if (buttonText === 'Начать новую диагностику') {
+      resetChat();
     }
   };
 
-  const handleMileageSubmit = () => {
-    if (mileage.trim() && /^\d+$/.test(mileage)) {
-      setStep(4);
+  const handleInputSubmit = () => {
+    if (!inputValue.trim() || isLoading) return;
+    
+    setWaitingForInput(false);
+    addUserMessage(inputValue);
+
+    if (currentStep === 2) {
+      setCarNumber(inputValue.toUpperCase());
+      setCurrentStep(3);
+      addBotMessage(
+        'Принято! Теперь введите текущий пробег автомобиля (только цифры).\n\nНапример: 150000',
+        undefined,
+        true,
+        'number',
+        '150000'
+      );
+    } else if (currentStep === 3) {
+      if (!/^\d+$/.test(inputValue)) {
+        addBotMessage('⚠️ Пожалуйста, введите только цифры для пробега.', undefined, true, 'number', '150000');
+        return;
+      }
+      setMileage(inputValue);
+      setCurrentStep(4);
+      addBotMessage(
+        'Отлично! Теперь выберите тип диагностики:',
+        diagnosticTypes.map(d => d.label)
+      );
     }
+
+    setInputValue('');
   };
 
-  const handleDiagnosticTypeSelect = async (type: string) => {
-    setDiagnosticType(type);
+  const saveDiagnostic = async (type: string) => {
     setIsLoading(true);
     
+    addBotMessage('⏳ Сохраняю данные диагностики...');
+
     try {
       const response = await fetch('https://functions.poehali.dev/e76024e1-4735-4e57-bf5f-060276b574c8', {
         method: 'POST',
@@ -73,18 +166,27 @@ const Index = () => {
       });
       
       if (!response.ok) {
-        throw new Error('Ошибка при сохранении диагностики');
+        throw new Error('Ошибка при сохранении');
       }
       
       const data = await response.json();
       setDiagnosticId(data.id);
-      setStep(5);
+      setCurrentStep(5);
       
+      const typeLabel = diagnosticTypes.find(d => d.value === type)?.label;
+      
+      addBotMessage(
+        `✅ Диагностика успешно сохранена!\n\n📋 Данные:\n• Механик: ${mechanic}\n• Госномер: ${carNumber}\n• Пробег: ${parseInt(mileage).toLocaleString('ru-RU')} км\n• Тип: ${typeLabel}\n\nВы можете скачать PDF отчёт или начать новую диагностику.`,
+        ['Скачать PDF отчёт', 'Начать новую диагностику']
+      );
+
       toast({
         title: 'Успешно!',
         description: 'Диагностика сохранена в базу данных'
       });
     } catch (error) {
+      addBotMessage('❌ Произошла ошибка при сохранении диагностики. Попробуйте ещё раз.', ['Начать новую диагностику']);
+      
       toast({
         title: 'Ошибка',
         description: 'Не удалось сохранить диагностику',
@@ -94,26 +196,32 @@ const Index = () => {
       setIsLoading(false);
     }
   };
-  
+
   const handleGenerateReport = async () => {
     if (!diagnosticId) return;
     
     setIsLoading(true);
+    addBotMessage('📄 Генерирую PDF отчёт...');
+
     try {
       const response = await fetch(`https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6?id=${diagnosticId}`);
       
       if (!response.ok) {
-        throw new Error('Ошибка при генерации отчёта');
+        throw new Error('Ошибка генерации');
       }
       
       const data = await response.json();
       window.open(data.pdfUrl, '_blank');
       
+      addBotMessage('✅ PDF отчёт готов и открыт в новой вкладке!', ['Начать новую диагностику']);
+
       toast({
         title: 'Готово!',
         description: 'PDF отчёт успешно сгенерирован'
       });
     } catch (error) {
+      addBotMessage('❌ Не удалось создать отчёт. Попробуйте ещё раз.', ['Скачать PDF отчёт', 'Начать новую диагностику']);
+      
       toast({
         title: 'Ошибка',
         description: 'Не удалось создать отчёт',
@@ -124,298 +232,111 @@ const Index = () => {
     }
   };
 
+  const resetChat = () => {
+    setMessages([
+      {
+        id: 0,
+        type: 'bot',
+        text: '👋 Начинаем новую диагностику!\n\nНажмите кнопку ниже, чтобы начать.',
+        buttons: ['Начать осмотр автомобиля']
+      }
+    ]);
+    setCurrentStep(0);
+    setMechanic('');
+    setCarNumber('');
+    setMileage('');
+    setDiagnosticType('');
+    setDiagnosticId(null);
+    setInputValue('');
+    setWaitingForInput(false);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
-        {step > 0 && (
-          <div className="mb-6 animate-fade-in">
-            <Progress value={progress} className="h-2" />
-            <p className="text-sm text-muted-foreground mt-2 text-center">
-              Шаг {step} из 5
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+      <Card className="w-full max-w-3xl h-[85vh] flex flex-col shadow-2xl border-2 border-primary/20 bg-slate-950/90 backdrop-blur">
+        <div className="bg-gradient-to-r from-primary to-accent p-5 flex items-center gap-4 rounded-t-lg">
+          <div className="w-14 h-14 bg-white/10 backdrop-blur rounded-full flex items-center justify-center">
+            <Icon name="Bot" size={32} className="text-white" />
           </div>
-        )}
+          <div>
+            <h1 className="text-2xl font-bold text-white">Бот МАХ</h1>
+            <p className="text-sm text-white/80">Диагностика автомобилей</p>
+          </div>
+        </div>
 
-        {step === 0 && (
-          <Card className="shadow-2xl border-2 animate-scale-in">
-            <CardHeader className="text-center pb-4">
-              <div className="mx-auto mb-4 w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                <Icon name="Car" size={40} className="text-primary" />
-              </div>
-              <CardTitle className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Бот МАХ
-              </CardTitle>
-              <CardDescription className="text-lg mt-2">
-                Система диагностики автомобилей
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <p className="text-center text-foreground">
-                  Добро пожаловать в систему диагностики автосервиса!
-                  <br />
-                  Нажмите кнопку ниже, чтобы начать осмотр автомобиля.
-                </p>
-              </div>
-              <Button 
-                onClick={handleStart} 
-                size="lg" 
-                className="w-full text-lg h-14 shadow-lg hover:shadow-xl transition-all"
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+            >
+              <div
+                className={`max-w-[80%] rounded-2xl px-5 py-3 ${
+                  message.type === 'user'
+                    ? 'bg-primary text-white'
+                    : 'bg-slate-800 text-white border border-slate-700'
+                }`}
               >
-                <Icon name="ClipboardCheck" className="mr-2" size={24} />
-                Начать осмотр автомобиля
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 1 && (
-          <Card className="shadow-2xl border-2 animate-fade-in">
-            <CardHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Icon name="UserCheck" size={24} className="text-primary" />
-                </div>
-                <CardTitle className="text-2xl">Выбор автомеханика</CardTitle>
-              </div>
-              <CardDescription>
-                Выберите, кто проводит диагностику автомобиля
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {mechanics.map((mech) => (
-                <Button
-                  key={mech}
-                  onClick={() => handleMechanicSelect(mech)}
-                  variant="outline"
-                  className="w-full justify-start text-left h-auto py-4 hover:bg-primary/5 hover:border-primary transition-all"
-                >
-                  <Icon name="User" className="mr-3" size={20} />
-                  <span className="text-lg">{mech}</span>
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 2 && (
-          <Card className="shadow-2xl border-2 animate-fade-in">
-            <CardHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Icon name="Hash" size={24} className="text-primary" />
-                </div>
-                <CardTitle className="text-2xl">Госномер автомобиля</CardTitle>
-              </div>
-              <CardDescription>
-                Введите государственный номер в латинице
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-muted/30 p-4 rounded-lg border">
-                <p className="text-sm text-muted-foreground mb-2">Выбран механик:</p>
-                <p className="font-semibold text-lg flex items-center gap-2">
-                  <Icon name="CheckCircle2" size={20} className="text-primary" />
-                  {mechanic}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="carNumber" className="text-base">
-                  Госномер (например: A159BK124)
-                </Label>
-                <Input
-                  id="carNumber"
-                  value={carNumber}
-                  onChange={(e) => setCarNumber(e.target.value.toUpperCase())}
-                  placeholder="A159BK124"
-                  className="text-lg h-12"
-                />
-              </div>
-              <Button 
-                onClick={handleCarNumberSubmit}
-                disabled={!carNumber.trim()}
-                size="lg" 
-                className="w-full text-lg h-12"
-              >
-                Продолжить
-                <Icon name="ArrowRight" className="ml-2" size={20} />
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 3 && (
-          <Card className="shadow-2xl border-2 animate-fade-in">
-            <CardHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Icon name="Gauge" size={24} className="text-primary" />
-                </div>
-                <CardTitle className="text-2xl">Пробег автомобиля</CardTitle>
-              </div>
-              <CardDescription>
-                Введите текущий пробег автомобиля в километрах
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-muted/30 p-4 rounded-lg border space-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Механик:</p>
-                  <p className="font-semibold">{mechanic}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Госномер:</p>
-                  <p className="font-semibold text-lg">{carNumber}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mileage" className="text-base">
-                  Пробег (только цифры)
-                </Label>
-                <Input
-                  id="mileage"
-                  type="text"
-                  value={mileage}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    setMileage(value);
-                  }}
-                  placeholder="150000"
-                  className="text-lg h-12"
-                />
-                {mileage && (
-                  <p className="text-sm text-muted-foreground">
-                    {parseInt(mileage).toLocaleString('ru-RU')} км
-                  </p>
+                <p className="whitespace-pre-line leading-relaxed">{message.text}</p>
+                
+                {message.buttons && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {message.buttons.map((button, index) => (
+                      <Button
+                        key={index}
+                        onClick={() => handleButtonClick(button)}
+                        disabled={isLoading}
+                        variant={message.type === 'user' ? 'secondary' : 'outline'}
+                        className="bg-primary/10 hover:bg-primary/20 border-primary/30 text-white"
+                      >
+                        {button}
+                      </Button>
+                    ))}
+                  </div>
                 )}
               </div>
-              <Button 
-                onClick={handleMileageSubmit}
-                disabled={!mileage.trim() || !/^\d+$/.test(mileage)}
-                size="lg" 
-                className="w-full text-lg h-12"
+            </div>
+          ))}
+          
+          {isLoading && (
+            <div className="flex justify-start animate-fade-in">
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl px-5 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+
+        {waitingForInput && (
+          <div className="p-4 bg-slate-900/50 border-t border-slate-700">
+            <div className="flex gap-2">
+              <Input
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleInputSubmit()}
+                placeholder="Введите ответ..."
+                disabled={isLoading}
+                className="flex-1 bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 h-12"
+                autoFocus
+              />
+              <Button
+                onClick={handleInputSubmit}
+                disabled={!inputValue.trim() || isLoading}
+                size="lg"
+                className="px-6"
               >
-                Продолжить
-                <Icon name="ArrowRight" className="ml-2" size={20} />
+                <Icon name="Send" size={20} />
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
-
-        {step === 4 && (
-          <Card className="shadow-2xl border-2 animate-fade-in">
-            <CardHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Icon name="Wrench" size={24} className="text-primary" />
-                </div>
-                <CardTitle className="text-2xl">Тип диагностики</CardTitle>
-              </div>
-              <CardDescription>
-                Выберите тип диагностики для проведения осмотра
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-muted/30 p-4 rounded-lg border space-y-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Механик:</p>
-                    <p className="font-semibold">{mechanic}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Госномер:</p>
-                    <p className="font-semibold">{carNumber}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Пробег:</p>
-                    <p className="font-semibold">{parseInt(mileage).toLocaleString('ru-RU')} км</p>
-                  </div>
-                </div>
-              </div>
-              <RadioGroup value={diagnosticType} onValueChange={handleDiagnosticTypeSelect}>
-                <div className="space-y-3">
-                  {diagnosticTypes.map((type) => (
-                    <Label
-                      key={type.value}
-                      htmlFor={type.value}
-                      className="flex items-center space-x-3 border-2 rounded-lg p-4 cursor-pointer hover:bg-primary/5 hover:border-primary transition-all"
-                    >
-                      <RadioGroupItem value={type.value} id={type.value} />
-                      <span className="text-lg font-medium">{type.label}</span>
-                    </Label>
-                  ))}
-                </div>
-              </RadioGroup>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 5 && (
-          <Card className="shadow-2xl border-2 animate-scale-in">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
-                <Icon name="CheckCircle2" size={48} className="text-primary" />
-              </div>
-              <CardTitle className="text-3xl">Данные приняты!</CardTitle>
-              <CardDescription className="text-base mt-2">
-                Информация о диагностике успешно сохранена
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-gradient-to-br from-primary/5 to-accent/5 p-6 rounded-lg border-2 space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground font-medium">Механик</p>
-                    <p className="font-bold text-lg">{mechanic}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground font-medium">Госномер</p>
-                    <p className="font-bold text-lg">{carNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground font-medium">Пробег</p>
-                    <p className="font-bold text-lg">{parseInt(mileage).toLocaleString('ru-RU')} км</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground font-medium">Тип диагностики</p>
-                    <p className="font-bold text-lg">
-                      {diagnosticTypes.find(t => t.value === diagnosticType)?.label}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <Button 
-                  onClick={handleGenerateReport}
-                  disabled={isLoading || !diagnosticId}
-                  size="lg" 
-                  variant="default"
-                  className="w-full text-lg h-12"
-                >
-                  <Icon name="FileText" className="mr-2" size={20} />
-                  {isLoading ? 'Генерация...' : 'Скачать PDF отчёт'}
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setStep(0);
-                    setMechanic('');
-                    setCarNumber('');
-                    setMileage('');
-                    setDiagnosticType('');
-                    setDiagnosticId(null);
-                  }}
-                  size="lg"
-                  variant="outline" 
-                  className="w-full text-lg h-12"
-                >
-                  <Icon name="Plus" className="mr-2" size={20} />
-                  Начать новую диагностику
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      </Card>
     </div>
   );
 };
