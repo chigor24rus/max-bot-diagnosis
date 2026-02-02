@@ -13,13 +13,17 @@
       "method": "POST",
       "path": "/",
       "body": {
-        "name": "Тестовый механик"
+        "name": "Тестовый механик",
+        "phone": "+79991234567",
+        "pinCode": "9999"
       },
       "expectedStatus": 201,
       "expectedBody": {
         "id": "number",
         "name": "string",
-        "createdAt": "string"
+        "phone": "string",
+        "pinCode": "string",
+        "isActive": true
       },
       "bodyMatcher": "partial"
     }

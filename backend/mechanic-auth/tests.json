@@ -1,0 +1,35 @@
+{
+  "tests": [
+    {
+      "name": "Test successful mechanic authentication",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "phone": "+79001234567",
+        "pin_code": "1234"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "mechanic": {
+          "name": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test invalid credentials",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "phone": "+79999999999",
+        "pin_code": "0000"
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

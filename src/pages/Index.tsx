@@ -1,14 +1,39 @@
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 import DiagnosticHistory from '@/components/DiagnosticHistory';
 import BotInfo from '@/components/BotInfo';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import ChecklistWizard from '@/components/ChecklistWizard';
+import MechanicAuth from '@/components/MechanicAuth';
 import { useChatLogic } from '@/hooks/useChatLogic';
 
 const Index = () => {
+  const [mechanic, setMechanic] = useState<{ id: number; name: string } | null>(null);
+
+  useEffect(() => {
+    // Проверяем сохранённые данные авторизации
+    const savedId = localStorage.getItem('mechanic_id');
+    const savedName = localStorage.getItem('mechanic_name');
+    
+    if (savedId && savedName) {
+      setMechanic({ id: parseInt(savedId), name: savedName });
+    }
+  }, []);
+
+  const handleAuthenticated = (mechanicData: { id: number; name: string }) => {
+    setMechanic(mechanicData);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('mechanic_id');
+    localStorage.removeItem('mechanic_name');
+    setMechanic(null);
+  };
+
   const {
     activeTab,
     setActiveTab,
@@ -24,19 +49,35 @@ const Index = () => {
     showChecklistWizard,
     handleChecklistComplete,
     handleChecklistCancel
-  } = useChatLogic();
+  } = useChatLogic(mechanic?.name);
+
+  // Показываем форму авторизации если не авторизован
+  if (!mechanic) {
+    return <MechanicAuth onAuthenticated={handleAuthenticated} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-4xl h-[90vh] flex flex-col bg-slate-950/90 border-primary/20 overflow-hidden">
-        <div className="bg-gradient-to-r from-primary to-accent p-4 flex items-center gap-3">
-          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-            <Icon name="Bot" size={28} className="text-white" />
+        <div className="bg-gradient-to-r from-primary to-accent p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+              <Icon name="Bot" size={28} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">HEVSR Diagnostics Bot</h1>
+              <p className="text-sm text-white/80">Механик: {mechanic.name}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">HEVSR Diagnostics Bot</h1>
-            <p className="text-sm text-white/80">Ваш помощник для диагностики автомобилей</p>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="text-white hover:bg-white/10"
+          >
+            <Icon name="LogOut" size={18} className="mr-2" />
+            Выйти
+          </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">

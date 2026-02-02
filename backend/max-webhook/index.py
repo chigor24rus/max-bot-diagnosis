@@ -132,6 +132,13 @@ def handle_message(update: dict):
     
     session = get_session(str(sender_id))
     
+    # Обработка контакта для авторизации
+    if session.get('step') == 1 and attachments:
+        for attachment in attachments:
+            if attachment.get('type') == 'contact':
+                handle_phone_auth(sender_id, session, attachment)
+                return
+    
     # Обработка фото в режиме чек-листа
     if session.get('step') == 5 and session.get('waiting_for_photo'):
         if attachments:
@@ -148,12 +155,9 @@ def handle_message(update: dict):
     if lower_text in ['/start', 'начать', 'старт']:
         session = {'step': 1}
         save_session(str(sender_id), session)
-        response_text = '👋 Привет! Я HEVSR Diagnostics bot.\n\nТы кто?'
+        response_text = '👋 Привет! Я HEVSR Diagnostics bot.\n\nДля начала работы поделитесь своим номером телефона:'
         buttons = [
-            [{'type': 'callback', 'text': 'Подкорытов С.А.', 'payload': 'mechanic:Подкорытов С.А.'}],
-            [{'type': 'callback', 'text': 'Костенко В.Ю.', 'payload': 'mechanic:Костенко В.Ю.'}],
-            [{'type': 'callback', 'text': 'Иванюта Д.И.', 'payload': 'mechanic:Иванюта Д.И.'}],
-            [{'type': 'callback', 'text': 'Загороднюк Н.Д.', 'payload': 'mechanic:Загороднюк Н.Д.'}]
+            [{'type': 'request_contact', 'text': '📱 Отправить номер телефона'}]
         ]
         send_message(sender_id, response_text, buttons)
         return
@@ -245,22 +249,11 @@ def handle_callback(update: dict):
     if payload == 'start':
         session = {'step': 1}
         save_session(str(sender_id), session)
-        response_text = '👋 Отлично! Ты кто?'
+        response_text = '👋 Отлично! Для начала работы поделитесь своим номером телефона:'
         buttons = [
-            [{'type': 'callback', 'text': 'Подкорытов С.А.', 'payload': 'mechanic:Подкорытов С.А.'}],
-            [{'type': 'callback', 'text': 'Костенко В.Ю.', 'payload': 'mechanic:Костенко В.Ю.'}],
-            [{'type': 'callback', 'text': 'Иванюта Д.И.', 'payload': 'mechanic:Иванюта Д.И.'}],
-            [{'type': 'callback', 'text': 'Загороднюк Н.Д.', 'payload': 'mechanic:Загороднюк Н.Д.'}]
+            [{'type': 'request_contact', 'text': '📱 Отправить номер телефона'}]
         ]
         send_message(sender_id, response_text, buttons)
-    
-    elif payload.startswith('mechanic:'):
-        mechanic = payload.replace('mechanic:', '')
-        session['mechanic'] = mechanic
-        session['step'] = 2
-        save_session(str(sender_id), session)
-        response_text = f'✅ Механик {mechanic} выбран!\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
-        send_message(sender_id, response_text)
     
     elif payload.startswith('type:'):
         diagnostic_type = payload.replace('type:', '')
@@ -405,6 +398,68 @@ def handle_callback(update: dict):
                 send_checklist_question(sender_id, session)
 
 
+def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
+    '''Обработка авторизации по номеру телефона'''
+    try:
+        # Извлекаем номер телефона из attachment
+        contact_payload = contact_attachment.get('payload', {})
+        phone = contact_payload.get('phone', '').strip()
+        
+        print(f"[DEBUG] Phone auth attempt: {phone}")
+        
+        if not phone:
+            response_text = '⚠️ Не удалось получить номер телефона. Попробуйте ещё раз.'
+            buttons = [[{'type': 'request_contact', 'text': '📱 Отправить номер телефона'}]]
+            send_message(sender_id, response_text, buttons)
+            return
+        
+        # Нормализуем номер телефона (удаляем пробелы, дефисы)
+        clean_phone = phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+        
+        # Ищем механика по номеру телефона
+        db_url = os.environ.get('DATABASE_URL')
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        
+        cur.execute(
+            f"SELECT id, name, is_active FROM {schema}.mechanics WHERE phone = '{clean_phone}'"
+        )
+        mechanic = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if not mechanic:
+            response_text = f'❌ Номер {phone} не зарегистрирован в системе.\n\nОбратитесь к администратору для получения доступа.'
+            buttons = [[{'type': 'callback', 'text': '🔙 Вернуться к началу', 'payload': 'start'}]]
+            send_message(sender_id, response_text, buttons)
+            return
+        
+        mechanic_id, mechanic_name, is_active = mechanic
+        
+        if not is_active:
+            response_text = f'❌ Ваш аккаунт деактивирован.\n\nОбратитесь к администратору.'
+            buttons = [[{'type': 'callback', 'text': '🔙 Вернуться к началу', 'payload': 'start'}]]
+            send_message(sender_id, response_text, buttons)
+            return
+        
+        # Сохраняем механика в сессии
+        session['mechanic'] = mechanic_name
+        session['mechanic_id'] = mechanic_id
+        session['step'] = 2
+        save_session(str(sender_id), session)
+        
+        response_text = f'✅ Добро пожаловать, {mechanic_name}!\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
+        send_message(sender_id, response_text)
+        
+    except Exception as e:
+        print(f"[ERROR] Phone auth failed: {str(e)}")
+        response_text = '⚠️ Ошибка авторизации. Попробуйте ещё раз или обратитесь к администратору.'
+        buttons = [[{'type': 'request_contact', 'text': '📱 Отправить номер телефона'}]]
+        send_message(sender_id, response_text, buttons)
+
+
 def save_diagnostic(session: dict) -> int:
     '''Сохранение диагностики в PostgreSQL'''
     try:
@@ -415,6 +470,7 @@ def save_diagnostic(session: dict) -> int:
         cur = conn.cursor()
         
         mechanic = session.get('mechanic', '')
+        mechanic_id = session.get('mechanic_id')
         car_number = session.get('car_number', '')
         mileage = session.get('mileage', 0)
         diagnostic_type = session.get('diagnostic_type', '')
@@ -422,10 +478,16 @@ def save_diagnostic(session: dict) -> int:
         krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
         now = datetime.now(krasnoyarsk_tz)
         
-        cur.execute(
-            f"INSERT INTO {schema}.diagnostics (mechanic, car_number, mileage, diagnostic_type, created_at, updated_at) "
-            f"VALUES ('{mechanic}', '{car_number}', {mileage}, '{diagnostic_type}', '{now.isoformat()}', '{now.isoformat()}') RETURNING id"
-        )
+        if mechanic_id:
+            cur.execute(
+                f"INSERT INTO {schema}.diagnostics (mechanic, mechanic_id, car_number, mileage, diagnostic_type, created_at, updated_at) "
+                f"VALUES ('{mechanic}', {mechanic_id}, '{car_number}', {mileage}, '{diagnostic_type}', '{now.isoformat()}', '{now.isoformat()}') RETURNING id"
+            )
+        else:
+            cur.execute(
+                f"INSERT INTO {schema}.diagnostics (mechanic, car_number, mileage, diagnostic_type, created_at, updated_at) "
+                f"VALUES ('{mechanic}', '{car_number}', {mileage}, '{diagnostic_type}', '{now.isoformat()}', '{now.isoformat()}') RETURNING id"
+            )
         
         result = cur.fetchone()
         conn.commit()

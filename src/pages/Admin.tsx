@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
 import { Badge } from '@/components/ui/badge';
+import MechanicsManager from '@/components/MechanicsManager';
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -325,45 +326,7 @@ const Admin = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-slate-950/90 border-slate-700">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Icon name="Users" size={20} className="text-primary" />
-              Механики
-            </CardTitle>
-            <CardDescription>Управление списком механиков</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                placeholder="Имя механика"
-                value={newMechanicName}
-                onChange={(e) => setNewMechanicName(e.target.value)}
-                className="bg-slate-900/50 border-slate-700 text-white"
-                onKeyDown={(e) => e.key === 'Enter' && addMechanic()}
-              />
-              <Button onClick={addMechanic} className="flex items-center gap-2">
-                <Icon name="Plus" size={16} />
-                Добавить
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              {mechanics.map((mechanic) => (
-                <div key={mechanic.id} className="flex items-center justify-between bg-slate-900/50 rounded-lg p-3 border border-slate-700">
-                  <span className="text-white">{mechanic.name}</span>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => deleteMechanic(mechanic.id)}
-                  >
-                    <Icon name="Trash2" size={16} />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <MechanicsManager />
 
         <Card className="bg-slate-950/90 border-slate-700">
           <CardHeader>

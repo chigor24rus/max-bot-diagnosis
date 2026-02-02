@@ -32,7 +32,7 @@ export type Message = {
   timestamp: Date;
 };
 
-export const useChatLogic = () => {
+export const useChatLogic = (mechanicName?: string) => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('chat');
   const [messages, setMessages] = useState<Message[]>([
@@ -45,7 +45,7 @@ export const useChatLogic = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [currentStep, setCurrentStep] = useState(0);
-  const [mechanic, setMechanic] = useState('');
+  const [mechanic, setMechanic] = useState(mechanicName || '');
   const [carNumber, setCarNumber] = useState('');
   const [mileage, setMileage] = useState('');
   const [diagnosticType, setDiagnosticType] = useState('');
@@ -230,8 +230,15 @@ export const useChatLogic = () => {
     const lowerText = text.toLowerCase().trim();
     
     if (lowerText === '/start' || lowerText.includes('начать') || lowerText.includes('осмотр')) {
-      setCurrentStep(1);
-      addBotMessage('Ты кто?', mechanics);
+      if (mechanicName) {
+        // Механик уже авторизован, сразу запрашиваем госномер
+        setCurrentStep(2);
+        addBotMessage('Введите госномер автомобиля.\n\nНапример: A159BK124');
+      } else {
+        // Fallback для старой версии без авторизации
+        setCurrentStep(1);
+        addBotMessage('Ты кто?', mechanics);
+      }
     }
     else if (lowerText === '/help' || lowerText.includes('помощь') || lowerText.includes('команды')) {
       addBotMessage(
@@ -344,8 +351,15 @@ export const useChatLogic = () => {
     setIsLoading(true);
 
     if (buttonText === 'Начать диагностику' || buttonText === 'Начать осмотр автомобиля') {
-      setCurrentStep(1);
-      addBotMessage('Отлично! Выберите механика, который проводит диагностику:', mechanics);
+      if (mechanicName) {
+        // Механик уже авторизован, сразу запрашиваем госномер
+        setCurrentStep(2);
+        addBotMessage('Введите госномер автомобиля.\n\nНапример: A159BK124');
+      } else {
+        // Fallback для старой версии без авторизации
+        setCurrentStep(1);
+        addBotMessage('Отлично! Выберите механика, который проводит диагностику:', mechanics);
+      }
     } 
     else if (mechanics.includes(buttonText)) {
       handleMechanicSelect(buttonText);
