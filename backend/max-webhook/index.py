@@ -941,12 +941,14 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list):
         conn.close()
         
         session['waiting_for_photo'] = False
+        
+        # Переход к следующему вопросу
+        session['question_index'] += 1
         save_session(str(sender_id), session)
         
         response_text = '✅ Фото дефекта сохранено!\n\nПродолжаем диагностику.'
         send_message(sender_id, response_text)
         
-        # Переход к следующему вопросу
         send_checklist_question(sender_id, session)
         
     except Exception as e:
