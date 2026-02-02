@@ -351,32 +351,58 @@ def handle_callback(update: dict):
         send_checklist_question(sender_id, session)
     
     elif payload == 'previous_question':
-        # Возврат к предыдущему вопросу
-        question_index = session.get('question_index', 0)
-        if question_index > 0:
-            # Удаляем предыдущий ответ из БД
-            questions = get_checklist_questions()
-            prev_question = questions[question_index - 1]
-            
+        # Возврат к предыдущему ОТВЕЧЕННОМУ вопросу
+        diagnostic_id = session.get('diagnostic_id')
+        
+        if diagnostic_id:
             try:
                 db_url = os.environ.get('DATABASE_URL')
                 schema = os.environ.get('MAIN_DB_SCHEMA')
                 conn = psycopg2.connect(db_url)
                 cur = conn.cursor()
                 
+                # Находим последний отвеченный вопрос
                 cur.execute(
-                    f"DELETE FROM {schema}.checklist_answers "
-                    f"WHERE diagnostic_id = {session['diagnostic_id']} AND question_number = {prev_question['id']}"
+                    f"SELECT question_number FROM {schema}.checklist_answers "
+                    f"WHERE diagnostic_id = {diagnostic_id} "
+                    f"ORDER BY question_number DESC LIMIT 1"
                 )
-                conn.commit()
+                last_answer = cur.fetchone()
+                
+                if last_answer:
+                    prev_question_number = last_answer[0]
+                    
+                    # Удаляем этот ответ
+                    cur.execute(
+                        f"DELETE FROM {schema}.checklist_answers "
+                        f"WHERE diagnostic_id = {diagnostic_id} AND question_number = {prev_question_number}"
+                    )
+                    conn.commit()
+                    
+                    # Находим индекс этого вопроса
+                    questions = get_checklist_questions()
+                    prev_index = next((i for i, q in enumerate(questions) if q['id'] == prev_question_number), 0)
+                    
+                    session['question_index'] = prev_index
+                    save_session(str(sender_id), session)
+                    send_checklist_question(sender_id, session)
+                else:
+                    # Если ответов нет - вернуться к первому вопросу
+                    session['question_index'] = 0
+                    save_session(str(sender_id), session)
+                    send_checklist_question(sender_id, session)
+                
                 cur.close()
                 conn.close()
             except Exception as e:
-                print(f"[ERROR] Failed to delete previous answer: {str(e)}")
-            
-            session['question_index'] = question_index - 1
-            save_session(str(sender_id), session)
-            send_checklist_question(sender_id, session)
+                print(f"[ERROR] Failed to go back: {str(e)}")
+        else:
+            # Если нет diagnostic_id - просто вернуться назад
+            question_index = session.get('question_index', 0)
+            if question_index > 0:
+                session['question_index'] = question_index - 1
+                save_session(str(sender_id), session)
+                send_checklist_question(sender_id, session)
 
 
 def save_diagnostic(session: dict) -> int:

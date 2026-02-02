@@ -115,15 +115,15 @@ const ChecklistWizard = ({ onComplete, onCancel }: ChecklistWizardProps) => {
   };
 
   const handleBack = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    if (answers.length > 0) {
       const prevAnswer = answers[answers.length - 1];
-      if (prevAnswer) {
-        setSelectedOption(prevAnswer.answerValue);
-        setSubSelections(prevAnswer.subAnswers || {});
-        setTextInput(prevAnswer.textInput || '');
-        setShowSubOptions(!!prevAnswer.subAnswers);
-      }
+      const prevQuestionIndex = checklistQuestions.findIndex((q) => q.id === prevAnswer.questionId);
+      
+      setCurrentQuestionIndex(prevQuestionIndex);
+      setSelectedOption(prevAnswer.answerValue);
+      setSubSelections(prevAnswer.subAnswers || {});
+      setTextInput(prevAnswer.textInput || '');
+      setShowSubOptions(!!prevAnswer.subAnswers);
       setAnswers(answers.slice(0, -1));
       setPhotoFiles([]);
     } else {
