@@ -612,28 +612,8 @@ def send_sub_question(sender_id: str, session: dict):
     
     print(f"[DEBUG] current_option: {current_option.get('label')}, allowMultiple: {current_option.get('allowMultiple')}")
     
-    # Если allowMultiple и уже есть выборы на текущем уровне
-    if current_option.get('allowMultiple') and sub_selections.get('main'):
-        # Проверяем, нужно ли показать вложенные подпункты
-        selected_items = sub_selections.get('main', [])
-        print(f"[DEBUG] Check nested: selected_items={selected_items}")
-        
-        if isinstance(selected_items, list) and len(selected_items) > 0:
-            # Проверяем, есть ли у выбранных элементов свои subOptions
-            for selected_value in selected_items:
-                sub_key = f'main-{selected_value}'
-                if sub_key not in sub_selections:
-                    # Нужно показать подпункты для этого элемента
-                    sub_option = next((so for so in current_option['subOptions'] if so['value'] == selected_value), None)
-                    if sub_option and 'subOptions' in sub_option:
-                        print(f"[DEBUG] Need nested question for {selected_value}")
-                        send_nested_sub_question(sender_id, session, sub_option, selected_value)
-                        return
-            
-            print(f"[DEBUG] All nested questions answered, finishing")
-            # Все подпункты собраны - завершаем
-            finish_sub_questions(sender_id, session)
-            return
+    # ⚠️ УДАЛЕНА логика автоматического показа вложенных вопросов
+    # Теперь вложенные вопросы показываются только после нажатия "➡️ Далее"
     
     # Показываем подпункты первого уровня
     allow_multiple = current_option.get('allowMultiple', False)
