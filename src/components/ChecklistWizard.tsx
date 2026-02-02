@@ -26,7 +26,7 @@ const ChecklistWizard = ({ onComplete, onCancel }: ChecklistWizardProps) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('');
-  const [subSelections, setSubSelections] = useState<Record<string, any>>({});
+  const [subSelections, setSubSelections] = useState<Record<string, string | string[]>>({});
   const [textInput, setTextInput] = useState('');
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [showSubOptions, setShowSubOptions] = useState(false);
@@ -173,25 +173,55 @@ const ChecklistWizard = ({ onComplete, onCancel }: ChecklistWizardProps) => {
   const renderSubOptions = (parentOption: AnswerOption, parentKey: string = 'main') => {
     if (!parentOption.subOptions || parentOption.subOptions.length === 0) return null;
 
+    const isMultiple = parentOption.allowMultiple;
+    const currentSelection = subSelections[parentKey];
+    const selectedValues = isMultiple && Array.isArray(currentSelection) ? currentSelection : [];
+
+    const handleMultiSelect = (subOpt: AnswerOption) => {
+      if (isMultiple) {
+        const newSelection = selectedValues.includes(subOpt.value)
+          ? selectedValues.filter(v => v !== subOpt.value)
+          : [...selectedValues, subOpt.value];
+        setSubSelections({ ...subSelections, [parentKey]: newSelection });
+      } else {
+        handleSubOptionSelect(parentKey, subOpt);
+      }
+    };
+
     return (
       <div className="ml-6 mt-3 space-y-2">
-        <div className="text-sm text-slate-300 font-medium">Выберите детали:</div>
-        {parentOption.subOptions.map((subOpt) => (
-          <div key={`${parentKey}-${subOpt.value}`}>
-            <Button
-              variant={subSelections[parentKey] === subOpt.value ? 'default' : 'outline'}
-              className="w-full justify-start text-left"
-              onClick={() => handleSubOptionSelect(parentKey, subOpt)}
-            >
-              {subOpt.label}
-            </Button>
-            {subSelections[parentKey] === subOpt.value && subOpt.subOptions && (
-              <div className="ml-4 mt-2">
-                {renderSubOptions(subOpt, `${parentKey}-${subOpt.value}`)}
-              </div>
-            )}
-          </div>
-        ))}
+        <div className="text-sm text-slate-300 font-medium">
+          {isMultiple ? 'Выберите все что подходит:' : 'Выберите детали:'}
+        </div>
+        {parentOption.subOptions.map((subOpt) => {
+          const isSelected = isMultiple 
+            ? selectedValues.includes(subOpt.value)
+            : subSelections[parentKey] === subOpt.value;
+
+          return (
+            <div key={`${parentKey}-${subOpt.value}`}>
+              <Button
+                variant={isSelected ? 'default' : 'outline'}
+                className="w-full justify-start text-left"
+                onClick={() => handleMultiSelect(subOpt)}
+              >
+                {isMultiple && (
+                  <Icon 
+                    name={isSelected ? 'CheckSquare' : 'Square'} 
+                    size={16} 
+                    className="mr-2" 
+                  />
+                )}
+                {subOpt.label}
+              </Button>
+              {!isMultiple && isSelected && subOpt.subOptions && (
+                <div className="ml-4 mt-2">
+                  {renderSubOptions(subOpt, `${parentKey}-${subOpt.value}`)}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -247,7 +277,8 @@ const ChecklistWizard = ({ onComplete, onCancel }: ChecklistWizardProps) => {
             ))}
           </div>
 
-          {currentQuestion.requiresPhoto && (
+          {(currentQuestion.requiresPhoto || 
+            (selectedOption && currentQuestion.options.find(o => o.value === selectedOption)?.allowMultiple)) && (
             <div className="mt-4">
               <label className="block text-sm text-slate-300 mb-2">
                 <Icon name="Camera" size={16} className="inline mr-1" />

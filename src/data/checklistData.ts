@@ -3,6 +3,7 @@ export type AnswerOption = {
   label: string;
   requiresText?: boolean;
   requiresPhoto?: boolean;
+  allowMultiple?: boolean;
   subOptions?: AnswerOption[];
   skipToQuestion?: number;
 };
@@ -35,11 +36,12 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        requiresPhoto: false,
+        allowMultiple: true,
         subOptions: [
-          { value: 'discharged', label: 'Разряжена' },
-          { value: 'missing', label: 'Отсутствует' },
-          { value: 'damaged', label: 'Повреждена' },
+          { value: 'discharged', label: 'Разряжена', requiresPhoto: false },
+          { value: 'missing', label: 'Отсутствует', requiresPhoto: false },
+          { value: 'damaged', label: 'Повреждена', requiresPhoto: false },
         ],
       },
       { value: 'na', label: 'Не предусмотрено' },
