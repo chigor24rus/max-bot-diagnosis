@@ -812,7 +812,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
       { value: '50-75', label: '50-75%' },
       { value: '75-100', label: '75-100%' },
       { value: 'above', label: 'Выше уровня' },
-      { value: 'need_disassembly', label: 'Требуется дополнительный разбор' },
+      { value: 'need_disassembly', label: 'Требуется дополнительный разбор', skipToQuestion: 47 },
       { value: 'na', label: 'Не предусмотрено', skipToQuestion: 47 },
       { value: 'other', label: 'Иное (указать текстом)', requiresText: true },
     ],
