@@ -788,9 +788,21 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
         45: 47,  # Уровень масла КПП → пропускаем 46 (Состояние масла КПП)
     }
     
+    # Проверяем условия пропуска
+    should_skip = False
+    target_question_id = None
+    
     if question_id in skip_logic and answer_value == 'na':
-        # Находим целевой вопрос
+        should_skip = True
         target_question_id = skip_logic[question_id]
+    
+    # Вопрос 45: при выборе "Требуется разбор" тоже пропускаем вопрос 46
+    if question_id == 45 and answer_value == 'need_disassembly':
+        should_skip = True
+        target_question_id = 47
+    
+    if should_skip and target_question_id:
+        # Находим целевой вопрос
         questions = get_checklist_questions()
         target_index = next((i for i, q in enumerate(questions) if q['id'] == target_question_id), None)
         if target_index is not None:
