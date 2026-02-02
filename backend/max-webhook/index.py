@@ -2,6 +2,8 @@ import json
 import os
 import requests
 import psycopg2
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 # Хранилище сессий пользователей (в продакшене использовать Redis)
 user_sessions = {}
@@ -194,14 +196,28 @@ def handle_callback(update: dict):
         session['diagnostic_type'] = diagnostic_type
         user_sessions[sender_id] = session
         
-        # Сохраняем в БД
-        diagnostic_id = save_diagnostic(session)
-        
-        if diagnostic_id:
-            type_labels = {'5min': '5-ти минутка', 'dhch': 'ДХЧ', 'des': 'ДЭС'}
-            type_label = type_labels.get(diagnostic_type, diagnostic_type)
+        # Если выбрана "5-ти минутка" - начинаем чек-лист
+        if diagnostic_type == '5min':
+            # Сохраняем диагностику в БД
+            diagnostic_id = save_diagnostic(session)
+            if diagnostic_id:
+                session['diagnostic_id'] = diagnostic_id
+                session['question_index'] = 0
+                session['step'] = 5  # Режим чек-листа
+                user_sessions[sender_id] = session
+                send_checklist_question(sender_id, session)
+            else:
+                response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
+                send_message(sender_id, response_text)
+        else:
+            # ДХЧ и ДЭС - сохраняем без чек-листа
+            diagnostic_id = save_diagnostic(session)
             
-            response_text = f'''✅ Диагностика №{diagnostic_id} сохранена!
+            if diagnostic_id:
+                type_labels = {'dhch': 'ДХЧ', 'des': 'ДЭС'}
+                type_label = type_labels.get(diagnostic_type, diagnostic_type)
+                
+                response_text = f'''✅ Диагностика №{diagnostic_id} сохранена!
 
 📋 Сводка:
 ━━━━━━━━━━━━━━━━
@@ -212,16 +228,17 @@ def handle_callback(update: dict):
 ━━━━━━━━━━━━━━━━
 
 Диагностика завершена!'''.replace(',', ' ')
-            
-            buttons = [[{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]]
-            send_message(sender_id, response_text, buttons)
-            
-            # Очищаем сессию
-            user_sessions[sender_id] = {'step': 0}
-        else:
-            response_text = '❌ Ошибка сохранения в базу данных. Попробуйте ещё раз.'
-            buttons = [[{'type': 'callback', 'text': 'Попробовать снова', 'payload': 'start'}]]
-            send_message(sender_id, response_text, buttons)
+                
+                buttons = [[{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]]
+                send_message(sender_id, response_text, buttons)
+                user_sessions[sender_id] = {'step': 0}
+            else:
+                response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
+                send_message(sender_id, response_text)
+    
+    elif payload.startswith('answer:'):
+        # Обработка ответа на вопрос чек-листа
+        handle_checklist_answer(sender_id, session, payload)
 
 
 def save_diagnostic(session: dict) -> int:
@@ -253,6 +270,213 @@ def save_diagnostic(session: dict) -> int:
     
     except Exception as e:
         return None
+
+
+def get_checklist_questions():
+    '''Возвращает список вопросов для чек-листа 5-ти минутки'''
+    return [
+        {'id': 1, 'title': 'Сигнал звукового тона', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 2, 'title': 'Батарейка ключа', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 3, 'title': 'Щетки стеклоочистителя переднего', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 4, 'title': 'Стекло лобовое', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 5, 'title': 'Подсветка приборов', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 6, 'title': 'Лампы неисправностей на панели приборов', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 7, 'title': 'Рамка переднего госномера', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 8, 'title': 'Габариты передние', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 9, 'title': 'Ближний свет', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 10, 'title': 'Дальний свет', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 11, 'title': 'Передние противотуманные фары', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 12, 'title': 'Повороты передние', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 13, 'title': 'Колесо переднее левое', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 14, 'title': 'Колесо заднее левое', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 15, 'title': 'Щетка стеклоочистителя заднего', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 16, 'title': 'Рамка заднего госномера', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 17, 'title': 'Подсветка заднего госномера', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 18, 'title': 'Габариты задние', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 19, 'title': 'Повороты задние', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 20, 'title': 'Стоп сигналы задние', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 21, 'title': 'Сигнал заднего хода', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 22, 'title': 'Задние противотуманные фары', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 23, 'title': 'Колесо заднее правое', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 24, 'title': 'Колесо переднее правое', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}]},
+        {'id': 25, 'title': 'Состояние приводных ремней', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 26, 'title': 'Уровень масла ДВС', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': '50-75', 'label': '50-75%'}, {'value': '75-100', 'label': '75-100%'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 27, 'title': 'Состояние масла ДВС', 'options': [{'value': 'fresh', 'label': 'Свежее'}, {'value': 'working', 'label': 'Рабочее'}, {'value': 'particles', 'label': 'С примесями'}]},
+        {'id': 28, 'title': 'Уровень жидкости ГУР', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': '50-75', 'label': '50-75%'}, {'value': '75-100', 'label': '75-100%'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 29, 'title': 'Состояние жидкости ГУР', 'options': [{'value': 'fresh', 'label': 'Свежее'}, {'value': 'working', 'label': 'Рабочее'}, {'value': 'burnt', 'label': 'Горелое'}]},
+        {'id': 30, 'title': 'Уровень охлаждающей жидкости ДВС', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': 'level', 'label': 'Уровень'}, {'value': 'above', 'label': 'Выше уровня'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 31, 'title': 'Цвет охлаждающей жидкости ДВС', 'options': [{'value': 'red', 'label': 'Красный'}, {'value': 'green', 'label': 'Зеленый'}, {'value': 'blue', 'label': 'Синий'}]},
+        {'id': 32, 'title': 'Состояние охлаждающей жидкости ДВС', 'options': [{'value': 'clean', 'label': 'Чистая'}, {'value': 'cloudy', 'label': 'Мутная'}]},
+        {'id': 33, 'title': 'Температура кристаллизации ОЖ ДВС', 'options': [{'value': '25_35', 'label': '-25-35°С'}, {'value': '35_45', 'label': '-35-45°С'}, {'value': 'more_45', 'label': 'Более -45°С'}]},
+        {'id': 34, 'title': 'Уровень охлаждающей жидкости HV', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': 'level', 'label': 'Уровень'}, {'value': 'above', 'label': 'Выше уровня'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 35, 'title': 'Цвет охлаждающей жидкости HV', 'options': [{'value': 'red', 'label': 'Красный'}, {'value': 'green', 'label': 'Зеленый'}, {'value': 'blue', 'label': 'Синий'}]},
+        {'id': 36, 'title': 'Состояние охлаждающей жидкости HV', 'options': [{'value': 'clean', 'label': 'Чистая'}, {'value': 'cloudy', 'label': 'Мутная'}]},
+        {'id': 37, 'title': 'Температура кристаллизации ОЖ HV', 'options': [{'value': '25_35', 'label': '-25-35°С'}, {'value': '35_45', 'label': '-35-45°С'}, {'value': 'more_45', 'label': 'Более -45°С'}]},
+        {'id': 38, 'title': 'Уровень охлаждающей жидкости турбины', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': 'level', 'label': 'Уровень'}, {'value': 'above', 'label': 'Выше уровня'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 39, 'title': 'Цвет охлаждающей жидкости турбины', 'options': [{'value': 'red', 'label': 'Красный'}, {'value': 'green', 'label': 'Зеленый'}, {'value': 'blue', 'label': 'Синий'}]},
+        {'id': 40, 'title': 'Состояние охлаждающей жидкости турбины', 'options': [{'value': 'clean', 'label': 'Чистая'}, {'value': 'cloudy', 'label': 'Мутная'}]},
+        {'id': 41, 'title': 'Температура кристаллизации ОЖ турбины', 'options': [{'value': '25_35', 'label': '-25-35°С'}, {'value': '35_45', 'label': '-35-45°С'}, {'value': 'more_45', 'label': 'Более -45°С'}]},
+        {'id': 42, 'title': 'Уровень тормозной жидкости', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': 'level', 'label': 'Уровень'}, {'value': 'above', 'label': 'Выше уровня'}]},
+        {'id': 43, 'title': 'Температура кипения тормозной жидкости', 'options': [{'value': 'less_180', 'label': 'Менее 180°С'}, {'value': 'more_180', 'label': 'Более 180°С'}]},
+        {'id': 44, 'title': 'Состояние тормозной жидкости', 'options': [{'value': 'clean', 'label': 'Чистая'}, {'value': 'cloudy', 'label': 'Мутная'}]},
+        {'id': 45, 'title': 'Уровень масла КПП', 'options': [{'value': 'below', 'label': 'Ниже уровня'}, {'value': '50-75', 'label': '50-75%'}, {'value': '75-100', 'label': '75-100%'}, {'value': 'need_disassembly', 'label': 'Требуется разбор'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 46, 'title': 'Состояние масла КПП', 'options': [{'value': 'fresh', 'label': 'Свежее'}, {'value': 'working', 'label': 'Рабочее'}, {'value': 'burnt', 'label': 'Горелое'}]},
+        {'id': 47, 'title': 'Омывающая жидкость', 'options': [{'value': 'present', 'label': 'Присутствует'}, {'value': 'missing', 'label': 'Отсутствует'}, {'value': 'frozen', 'label': 'Замерзла'}]},
+        {'id': 48, 'title': 'Работа стартера при запуске ДВС', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 49, 'title': 'Работа ДВС', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 50, 'title': 'Работа КПП', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 51, 'title': 'Течи технических жидкостей', 'options': [{'value': 'no_leaks', 'label': 'Нет течей'}, {'value': 'has_leaks', 'label': 'Есть течи'}]},
+        {'id': 52, 'title': 'Состояние воздушного фильтра', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'need_disassembly', 'label': 'Требуется разбор'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 53, 'title': 'Состояние салонного фильтра', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'need_disassembly', 'label': 'Требуется разбор'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 54, 'title': 'Состояние фильтра ВВБ', 'options': [{'value': 'ok', 'label': 'Исправно'}, {'value': 'bad', 'label': 'Неисправно'}, {'value': 'need_disassembly', 'label': 'Требуется разбор'}, {'value': 'na', 'label': 'Не предусмотрено'}]},
+        {'id': 55, 'title': 'Иные замечания', 'options': [{'value': 'complete', 'label': 'Завершить, замечаний нет'}]},
+    ]
+
+
+def send_checklist_question(sender_id: str, session: dict):
+    '''Отправляет текущий вопрос чек-листа'''
+    questions = get_checklist_questions()
+    question_index = session.get('question_index', 0)
+    
+    if question_index >= len(questions):
+        # Чек-лист завершен - генерируем отчет
+        finish_checklist(sender_id, session)
+        return
+    
+    question = questions[question_index]
+    total = len(questions)
+    
+    response_text = f'''📋 Вопрос {question_index + 1} из {total}
+
+{question['title']}'''
+    
+    # Формируем кнопки из опций
+    buttons = []
+    for option in question['options']:
+        buttons.append([{
+            'type': 'callback',
+            'text': option['label'],
+            'payload': f"answer:{question['id']}:{option['value']}"
+        }])
+    
+    # Кнопка пропуска (если не последний вопрос)
+    if question_index < len(questions) - 1:
+        buttons.append([{'type': 'callback', 'text': '⏭ Пропустить', 'payload': f"answer:{question['id']}:skip"}])
+    
+    send_message(sender_id, response_text, buttons)
+
+
+def handle_checklist_answer(sender_id: str, session: dict, payload: str):
+    '''Обработка ответа на вопрос чек-листа'''
+    # Парсим payload: "answer:question_id:value"
+    parts = payload.split(':')
+    if len(parts) < 3:
+        return
+    
+    question_id = int(parts[1])
+    answer_value = parts[2]
+    
+    # Сохраняем ответ в БД
+    if answer_value != 'skip':
+        save_checklist_answer(session['diagnostic_id'], question_id, answer_value)
+    
+    # Переход к следующему вопросу
+    session['question_index'] += 1
+    user_sessions[sender_id] = session
+    
+    send_checklist_question(sender_id, session)
+
+
+def save_checklist_answer(diagnostic_id: int, question_number: int, answer_value: str):
+    '''Сохранение ответа на вопрос чек-листа в БД'''
+    try:
+        db_url = os.environ.get('DATABASE_URL')
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        
+        questions = get_checklist_questions()
+        question = next((q for q in questions if q['id'] == question_number), None)
+        
+        if not question:
+            return
+        
+        question_text = question['title']
+        
+        # Определяем значение ответа для answer_value
+        if answer_value == 'ok':
+            answer_val = 'Исправно'
+        elif answer_value == 'bad':
+            answer_val = 'Неисправно'
+        elif answer_value == 'na':
+            answer_val = 'Не предусмотрено'
+        elif answer_value == 'no_leaks':
+            answer_val = 'Нет течей'
+        elif answer_value == 'has_leaks':
+            answer_val = 'Есть течи'
+        elif answer_value == 'complete':
+            answer_val = 'Завершить, замечаний нет'
+        else:
+            # Найдем label в опциях
+            option = next((opt for opt in question['options'] if opt['value'] == answer_value), None)
+            answer_val = option['label'] if option else answer_value
+        
+        cur.execute(
+            f"INSERT INTO {schema}.checklist_answers (diagnostic_id, question_number, question_text, answer_value) "
+            f"VALUES ({diagnostic_id}, {question_number}, '{question_text}', '{answer_val}')"
+        )
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        print(f"[SUCCESS] Saved answer for question {question_number}")
+    
+    except Exception as e:
+        print(f"[ERROR] Failed to save checklist answer: {str(e)}")
+
+
+def finish_checklist(sender_id: str, session: dict):
+    '''Завершение чек-листа и генерация отчета'''
+    diagnostic_id = session.get('diagnostic_id')
+    
+    # Запрос на генерацию PDF
+    report_url = f"https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6?id={diagnostic_id}"
+    
+    try:
+        response = requests.get(report_url, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            pdf_url = result.get('pdfUrl')
+            
+            response_text = f'''✅ Диагностика №{diagnostic_id} завершена!
+
+📋 Сводка:
+━━━━━━━━━━━━━━━━
+👤 Механик: {session['mechanic']}
+🚗 Госномер: {session['car_number']}
+🛣 Пробег: {session['mileage']:,} км
+🔧 Тип: 5-ти минутка
+━━━━━━━━━━━━━━━━
+
+📄 Отчет готов!
+{pdf_url}'''.replace(',', ' ')
+        else:
+            response_text = f'''✅ Диагностика №{diagnostic_id} завершена!
+
+📋 Чек-лист сохранен, но отчет временно недоступен.'''
+    except Exception as e:
+        print(f"[ERROR] Failed to generate report: {str(e)}")
+        response_text = f'''✅ Диагностика №{diagnostic_id} завершена!
+
+📋 Чек-лист сохранен.'''
+    
+    buttons = [[{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]]
+    send_message(sender_id, response_text, buttons)
+    
+    # Сброс сессии
+    user_sessions[sender_id] = {'step': 0}
 
 
 def send_message(user_id: int, text: str, buttons: list = None):
