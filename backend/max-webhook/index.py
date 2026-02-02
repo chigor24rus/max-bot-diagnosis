@@ -8,8 +8,52 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from io import BytesIO
 
-# Хранилище сессий пользователей (в продакшене использовать Redis)
-user_sessions = {}
+
+def get_session(user_id: str) -> dict:
+    '''Получение сессии пользователя из БД'''
+    try:
+        db_url = os.environ.get('DATABASE_URL')
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        
+        cur.execute(
+            f"SELECT session_data FROM {schema}.max_sessions WHERE user_id = '{user_id}'"
+        )
+        row = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        if row:
+            return row[0]
+        return {'step': 0}
+    except Exception as e:
+        print(f"[ERROR] Failed to get session: {str(e)}")
+        return {'step': 0}
+
+
+def save_session(user_id: str, session: dict):
+    '''Сохранение сессии пользователя в БД'''
+    try:
+        db_url = os.environ.get('DATABASE_URL')
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        
+        session_json = json.dumps(session, ensure_ascii=False).replace("'", "''")
+        
+        cur.execute(
+            f"INSERT INTO {schema}.max_sessions (user_id, session_data, updated_at) "
+            f"VALUES ('{user_id}', '{session_json}'::jsonb, CURRENT_TIMESTAMP) "
+            f"ON CONFLICT (user_id) DO UPDATE SET session_data = '{session_json}'::jsonb, updated_at = CURRENT_TIMESTAMP"
+        )
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"[ERROR] Failed to save session: {str(e)}")
 
 def handler(event: dict, context) -> dict:
     '''Webhook для приёма сообщений от MAX бота и отправки ответов'''
@@ -85,7 +129,7 @@ def handle_message(update: dict):
         print("[WARNING] No sender_id found, skipping message")
         return
     
-    session = user_sessions.get(sender_id, {'step': 0})
+    session = get_session(str(sender_id))
     
     # Обработка фото в режиме чек-листа
     if session.get('step') == 5 and session.get('waiting_for_photo'):
@@ -101,7 +145,8 @@ def handle_message(update: dict):
     
     # Команды
     if lower_text in ['/start', 'начать', 'старт']:
-        user_sessions[sender_id] = {'step': 1}
+        session = {'step': 1}
+        save_session(str(sender_id), session)
         response_text = '👋 Привет! Я HEVSR Diagnostics bot.\n\nВыберите механика для диагностики:'
         buttons = [
             [{'type': 'callback', 'text': 'Подкорытов С.А.', 'payload': 'mechanic:Подкорытов С.А.'}],
@@ -124,7 +169,8 @@ def handle_message(update: dict):
         return
     
     elif lower_text in ['/cancel', 'отмена']:
-        user_sessions[sender_id] = {'step': 0}
+        session = {'step': 0}
+        save_session(str(sender_id), session)
         response_text = '✅ Операция отменена.\n\nВведите /start для новой диагностики.'
         buttons = [[{'type': 'callback', 'text': 'Начать диагностику', 'payload': 'start'}]]
         send_message(sender_id, response_text, buttons)
@@ -144,7 +190,7 @@ def handle_message(update: dict):
         if len(clean_number) >= 5:
             session['car_number'] = clean_number
             session['step'] = 3
-            user_sessions[sender_id] = session
+            save_session(str(sender_id), session)
             response_text = f'✅ Госномер {clean_number} принят!\n\nТеперь введите пробег автомобиля (в км).\n\nНапример: 150000'
             send_message(sender_id, response_text)
         else:
@@ -157,7 +203,7 @@ def handle_message(update: dict):
         if mileage_str and int(mileage_str) > 0:
             session['mileage'] = int(mileage_str)
             session['step'] = 4
-            user_sessions[sender_id] = session
+            save_session(str(sender_id), session)
             response_text = f'✅ Пробег {int(mileage_str):,} км принят!\n\nТеперь выберите тип диагностики:'.replace(',', ' ')
             buttons = [
                 [{'type': 'callback', 'text': '5-ти минутка', 'payload': 'type:5min'}],
@@ -186,10 +232,11 @@ def handle_callback(update: dict):
         print("[WARNING] No sender_id found in callback, skipping")
         return
     
-    session = user_sessions.get(sender_id, {'step': 0})
+    session = get_session(str(sender_id))
     
     if payload == 'start':
-        user_sessions[sender_id] = {'step': 1}
+        session = {'step': 1}
+        save_session(str(sender_id), session)
         response_text = '👋 Отлично! Выберите механика:'
         buttons = [
             [{'type': 'callback', 'text': 'Подкорытов С.А.', 'payload': 'mechanic:Подкорытов С.А.'}],
@@ -203,14 +250,14 @@ def handle_callback(update: dict):
         mechanic = payload.replace('mechanic:', '')
         session['mechanic'] = mechanic
         session['step'] = 2
-        user_sessions[sender_id] = session
+        save_session(str(sender_id), session)
         response_text = f'✅ Механик {mechanic} выбран!\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
         send_message(sender_id, response_text)
     
     elif payload.startswith('type:'):
         diagnostic_type = payload.replace('type:', '')
         session['diagnostic_type'] = diagnostic_type
-        user_sessions[sender_id] = session
+        save_session(str(sender_id), session)
         
         # Если выбрана "5-ти минутка" - начинаем чек-лист
         if diagnostic_type == '5min':
@@ -219,8 +266,8 @@ def handle_callback(update: dict):
             if diagnostic_id:
                 session['diagnostic_id'] = diagnostic_id
                 session['question_index'] = 0
-                session['step'] = 5  # Режим чек-листа
-                user_sessions[sender_id] = session
+                session['step'] = 5
+                save_session(str(sender_id), session)
                 send_checklist_question(sender_id, session)
             else:
                 response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
@@ -247,7 +294,8 @@ def handle_callback(update: dict):
                 
                 buttons = [[{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]]
                 send_message(sender_id, response_text, buttons)
-                user_sessions[sender_id] = {'step': 0}
+                session = {'step': 0}
+                save_session(str(sender_id), session)
             else:
                 response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
                 send_message(sender_id, response_text)
@@ -259,7 +307,7 @@ def handle_callback(update: dict):
     elif payload == 'add_photo':
         # Запрос на добавление фото
         session['waiting_for_photo'] = True
-        user_sessions[sender_id] = session
+        save_session(str(sender_id), session)
         response_text = '📸 Прикрепите фото дефекта в следующем сообщении.'
         buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
         send_message(sender_id, response_text, buttons)
@@ -267,7 +315,7 @@ def handle_callback(update: dict):
     elif payload == 'skip_photo':
         # Пропуск фото
         session['waiting_for_photo'] = False
-        user_sessions[sender_id] = session
+        save_session(str(sender_id), session)
         send_checklist_question(sender_id, session)
 
 
@@ -417,7 +465,7 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
     
     # Переход к следующему вопросу
     session['question_index'] += 1
-    user_sessions[sender_id] = session
+    save_session(str(sender_id), session)
     
     send_checklist_question(sender_id, session)
 
@@ -487,7 +535,7 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list):
         conn.close()
         
         session['waiting_for_photo'] = False
-        user_sessions[sender_id] = session
+        save_session(str(sender_id), session)
         
         response_text = '✅ Фото дефекта сохранено!\n\nПродолжаем диагностику.'
         send_message(sender_id, response_text)
@@ -617,7 +665,8 @@ def finish_checklist(sender_id: str, session: dict):
     send_message(sender_id, response_text, buttons)
     
     # Сброс сессии
-    user_sessions[sender_id] = {'step': 0}
+    session = {'step': 0}
+    save_session(str(sender_id), session)
 
 
 def send_message(user_id: int, text: str, buttons: list = None):
