@@ -10,7 +10,7 @@ const BotInfo = () => {
           <div className="mx-auto mb-4 w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-2xl">
             <Icon name="Bot" size={48} className="text-white" />
           </div>
-          <CardTitle className="text-3xl font-bold text-white">Бот МАХ</CardTitle>
+          <CardTitle className="text-3xl font-bold text-white">HEVSR Diagnostics bot</CardTitle>
           <div className="flex items-center justify-center gap-2 text-sm text-slate-400 mt-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
             <span>Активен • Версия 1.0</span>

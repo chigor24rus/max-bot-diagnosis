@@ -37,7 +37,7 @@ const Index = () => {
     {
       id: 0,
       type: 'bot',
-      text: '👋 Привет! Я бот МАХ — ваш помощник для проведения диагностики автомобилей.\n\nВведите команду /start чтобы начать или просто напишите мне!',
+      text: '👋 Привет! Я HEVSR Diagnostics bot — ваш помощник для проведения диагностики автомобилей.\n\nВведите команду /start чтобы начать или просто напишите мне!',
       timestamp: new Date()
     }
   ]);
@@ -332,7 +332,7 @@ const Index = () => {
             </div>
           </Avatar>
           <div className="flex-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Бот МАХ</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">HEVSR Diagnostics bot</h1>
             <div className="flex items-center gap-2 text-sm text-white/80">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
               <span>онлайн</span>
