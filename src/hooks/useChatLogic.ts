@@ -14,6 +14,17 @@ export const diagnosticTypes = [
   { value: 'des', label: 'ДЭС' }
 ];
 
+export const checklistItems5min = [
+  'Уровень масла в ДВС',
+  'Уровень охлаждающей жидкости',
+  'Уровень тормозной жидкости',
+  'Состояние аккумулятора',
+  'Давление в шинах',
+  'Работа световых приборов',
+  'Состояние щеток стеклоочистителей',
+  'Уровень жидкости стеклоомывателя'
+];
+
 export type Message = {
   id: number;
   type: 'bot' | 'user';
@@ -41,6 +52,7 @@ export const useChatLogic = () => {
   const [diagnosticType, setDiagnosticType] = useState('');
   const [diagnosticId, setDiagnosticId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [checkedItems, setCheckedItems] = useState<string[]>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +94,7 @@ export const useChatLogic = () => {
     setMileage('');
     setDiagnosticType('');
     setDiagnosticId(null);
+    setCheckedItems([]);
     addBotMessage(
       'Чат сброшен! Введите /start чтобы начать новую диагностику.',
       ['Начать диагностику']
@@ -98,7 +111,17 @@ export const useChatLogic = () => {
 
   const handleDiagnosticTypeSelect = (type: string) => {
     setDiagnosticType(type);
-    saveDiagnostic(type);
+    
+    if (type === '5min') {
+      setCurrentStep(4.5);
+      setCheckedItems([]);
+      addBotMessage(
+        '📋 Отлично! Начинаем диагностику "5-ти минутка".\n\nПроверьте следующие пункты и отмечайте их по мере выполнения:',
+        checklistItems5min
+      );
+    } else {
+      saveDiagnostic(type);
+    }
   };
 
   const saveDiagnostic = async (type: string) => {
@@ -299,6 +322,25 @@ export const useChatLogic = () => {
     }
   };
 
+  const toggleChecklistItem = (item: string) => {
+    setCheckedItems(prev => {
+      const newChecked = prev.includes(item)
+        ? prev.filter(i => i !== item)
+        : [...prev, item];
+      
+      if (newChecked.length === checklistItems5min.length) {
+        setTimeout(() => {
+          addBotMessage(
+            '✅ Все пункты проверены! Сохраняю результаты диагностики...',
+            ['Завершить и сохранить']
+          );
+        }, 500);
+      }
+      
+      return newChecked;
+    });
+  };
+
   const handleButtonClick = (buttonText: string) => {
     if (isLoading) return;
     
@@ -317,7 +359,14 @@ export const useChatLogic = () => {
       if (selectedType) {
         handleDiagnosticTypeSelect(selectedType.value);
       }
-    } 
+    }
+    else if (checklistItems5min.includes(buttonText)) {
+      toggleChecklistItem(buttonText);
+      setIsLoading(false);
+    }
+    else if (buttonText === 'Завершить и сохранить') {
+      saveDiagnostic(diagnosticType);
+    }
     else if (buttonText === 'Скачать PDF отчёт') {
       handleGenerateReport();
     } 
@@ -347,6 +396,7 @@ export const useChatLogic = () => {
     messagesEndRef,
     inputRef,
     handleButtonClick,
-    handleSendMessage
+    handleSendMessage,
+    checkedItems
   };
 };

@@ -18,7 +18,8 @@ const Index = () => {
     messagesEndRef,
     inputRef,
     handleButtonClick,
-    handleSendMessage
+    handleSendMessage,
+    checkedItems
   } = useChatLogic();
 
   return (
@@ -58,6 +59,7 @@ const Index = () => {
                   message={message}
                   isLoading={isLoading}
                   onButtonClick={handleButtonClick}
+                  checkedItems={checkedItems}
                 />
               ))}
               <div ref={messagesEndRef} />
