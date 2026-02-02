@@ -37,7 +37,6 @@ export const checklistQuestions: ChecklistQuestion[] = [
         value: 'bad',
         label: 'Неисправно',
         requiresPhoto: false,
-        allowMultiple: true,
         subOptions: [
           { value: 'discharged', label: 'Разряжена', requiresPhoto: false },
           { value: 'missing', label: 'Отсутствует', requiresPhoto: false },
@@ -57,11 +56,12 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
+        allowMultiple: true,
         subOptions: [
           {
             value: 'right',
             label: 'Передняя правая',
-            requiresPhoto: true,
+            requiresPhoto: false,
             subOptions: [
               { value: 'smearing', label: 'Мажет' },
               { value: 'damaged', label: 'Повреждена' },
@@ -71,7 +71,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
           {
             value: 'left',
             label: 'Передняя левая',
-            requiresPhoto: true,
+            requiresPhoto: false,
             subOptions: [
               { value: 'smearing', label: 'Мажет' },
               { value: 'damaged', label: 'Повреждена' },
@@ -106,7 +106,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 5,
     title: 'Подсветка приборов',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'ok', label: 'Исправно' },
       { value: 'bad', label: 'Неисправно' },
@@ -122,7 +122,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'check_engine', label: 'Check Engine' },
           { value: 'srs', label: 'SRS' },
@@ -138,7 +139,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 7,
     title: 'Рамка переднего госномера',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'ok', label: 'Исправно' },
       { value: 'bad', label: 'Неисправно' },
@@ -154,7 +155,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right', label: 'Справа' },
           { value: 'left', label: 'Слева' },
@@ -172,7 +174,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right', label: 'Справа' },
           { value: 'left', label: 'Слева' },
@@ -190,7 +193,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right', label: 'Справа' },
           { value: 'left', label: 'Слева' },
@@ -208,7 +212,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right', label: 'Справа' },
           { value: 'left', label: 'Слева' },
@@ -227,7 +232,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right_main', label: 'Справа основной' },
           { value: 'right_mirror', label: 'Справа зеркало' },
@@ -249,7 +255,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'bulges_cuts', label: 'Грыжи, порезы' },
           { value: 'valve_cracks', label: 'Вентиль трещины' },
@@ -269,7 +276,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'bulges_cuts', label: 'Грыжи, порезы' },
           { value: 'valve_cracks', label: 'Вентиль трещины' },
@@ -289,7 +297,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'smearing', label: 'Мажет' },
           { value: 'damaged', label: 'Повреждена' },
@@ -304,7 +312,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 16,
     title: 'Рамка заднего госномера',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'ok', label: 'Исправно' },
       { value: 'bad', label: 'Неисправно' },
@@ -315,13 +323,14 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 17,
     title: 'Подсветка заднего госномера',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'ok', label: 'Исправно' },
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right', label: 'Справа' },
           { value: 'left', label: 'Слева' },
@@ -339,7 +348,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right', label: 'Справа' },
           { value: 'left', label: 'Слева' },
@@ -357,7 +367,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right', label: 'Справа' },
           { value: 'left', label: 'Слева' },
@@ -375,7 +386,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right', label: 'Справа' },
           { value: 'center', label: 'Центральный' },
@@ -394,7 +406,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right', label: 'Справа' },
           { value: 'left', label: 'Слева' },
@@ -412,7 +425,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'right', label: 'Справа' },
           { value: 'left', label: 'Слева' },
@@ -431,7 +445,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'bulges_cuts', label: 'Грыжи, порезы' },
           { value: 'valve_cracks', label: 'Вентиль трещины' },
@@ -451,7 +466,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'bulges_cuts', label: 'Грыжи, порезы' },
           { value: 'valve_cracks', label: 'Вентиль трещины' },
@@ -471,11 +487,12 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
+        allowMultiple: true,
         subOptions: [
           {
             value: 'timing_belt',
             label: 'Ремень ГРМ',
-            requiresPhoto: true,
+            requiresPhoto: false,
             subOptions: [
               { value: 'cracks', label: 'Трещины' },
               { value: 'peeling', label: 'Отслоения' },
@@ -486,7 +503,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
           {
             value: 'alternator_belt',
             label: 'Ремень генератора',
-            requiresPhoto: true,
+            requiresPhoto: false,
             subOptions: [
               { value: 'cracks', label: 'Трещины' },
               { value: 'peeling', label: 'Отслоения' },
@@ -497,7 +514,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
           {
             value: 'power_steering_belt',
             label: 'Ремень ГУР',
-            requiresPhoto: true,
+            requiresPhoto: false,
             subOptions: [
               { value: 'cracks', label: 'Трещины' },
               { value: 'peeling', label: 'Отслоения' },
@@ -508,7 +525,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
           {
             value: 'ac_belt',
             label: 'Ремень кондиционера',
-            requiresPhoto: true,
+            requiresPhoto: false,
             subOptions: [
               { value: 'cracks', label: 'Трещины' },
               { value: 'peeling', label: 'Отслоения' },
@@ -519,7 +536,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
           {
             value: 'pump_belt',
             label: 'Ремень помпы',
-            requiresPhoto: true,
+            requiresPhoto: false,
             subOptions: [
               { value: 'cracks', label: 'Трещины' },
               { value: 'peeling', label: 'Отслоения' },
@@ -537,7 +554,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 26,
     title: 'Уровень масла ДВС',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'below', label: 'Ниже уровня' },
       { value: '0-25', label: '0-25%' },
@@ -553,7 +570,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 27,
     title: 'Состояние масла ДВС',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'fresh', label: 'Свежее' },
       { value: 'working', label: 'Рабочее' },
@@ -566,7 +583,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 28,
     title: 'Уровень жидкости ГУР',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'below', label: 'Ниже уровня' },
       { value: '0-25', label: '0-25%' },
@@ -582,7 +599,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 29,
     title: 'Состояние жидкости ГУР',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'fresh', label: 'Свежее' },
       { value: 'working', label: 'Рабочее' },
@@ -596,7 +613,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 30,
     title: 'Уровень охлаждающей жидкости ДВС',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'below', label: 'Ниже уровня' },
       { value: 'level', label: 'Уровень' },
@@ -609,7 +626,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 31,
     title: 'Цвет охлаждающей жидкости ДВС',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'red', label: 'Красный' },
       { value: 'green', label: 'Зеленый' },
@@ -623,7 +640,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 32,
     title: 'Состояние охлаждающей жидкости ДВС',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'clean', label: 'Чистая' },
       { value: 'cloudy', label: 'Мутная' },
@@ -635,7 +652,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 33,
     title: 'Температура кристаллизации ОЖ ДВС',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'less_25', label: 'Менее -25⁰С' },
       { value: '25_35', label: '-25 - 35⁰С' },
@@ -648,7 +665,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 34,
     title: 'Уровень охлаждающей жидкости HV',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'below', label: 'Ниже уровня' },
       { value: 'level', label: 'Уровень' },
@@ -661,7 +678,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 35,
     title: 'Цвет охлаждающей жидкости HV',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'red', label: 'Красный' },
       { value: 'green', label: 'Зеленый' },
@@ -675,7 +692,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 36,
     title: 'Состояние охлаждающей жидкости HV',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'clean', label: 'Чистая' },
       { value: 'cloudy', label: 'Мутная' },
@@ -687,7 +704,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 37,
     title: 'Температура кристаллизации ОЖ HV',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'less_25', label: 'Менее -25⁰С' },
       { value: '25_35', label: '-25 - 35⁰С' },
@@ -700,7 +717,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 38,
     title: 'Уровень охлаждающей жидкости турбины',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'below', label: 'Ниже уровня' },
       { value: 'level', label: 'Уровень' },
@@ -713,7 +730,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 39,
     title: 'Цвет охлаждающей жидкости турбины',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'red', label: 'Красный' },
       { value: 'green', label: 'Зеленый' },
@@ -727,7 +744,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 40,
     title: 'Состояние охлаждающей жидкости турбины',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'clean', label: 'Чистая' },
       { value: 'cloudy', label: 'Мутная' },
@@ -739,7 +756,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 41,
     title: 'Температура кристаллизации ОЖ турбины',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'less_25', label: 'Менее -25⁰С' },
       { value: '25_35', label: '-25 - 35⁰С' },
@@ -752,7 +769,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 42,
     title: 'Уровень тормозной жидкости',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'below', label: 'Ниже уровня' },
       { value: 'level', label: 'Уровень' },
@@ -764,7 +781,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 43,
     title: 'Температура кипения тормозной жидкости',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'less_180', label: 'Менее 180⁰С' },
       { value: 'more_180', label: 'Более 180⁰С' },
@@ -775,7 +792,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 44,
     title: 'Состояние тормозной жидкости',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'clean', label: 'Чистая' },
       { value: 'cloudy', label: 'Мутная' },
@@ -787,7 +804,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 45,
     title: 'Уровень масла КПП',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'below', label: 'Ниже уровня' },
       { value: '0-25', label: '0-25%' },
@@ -804,7 +821,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 46,
     title: 'Состояние масла КПП',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'fresh', label: 'Свежее' },
       { value: 'working', label: 'Рабочее' },
@@ -818,7 +835,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
     id: 47,
     title: 'Омывающая жидкость',
     answerType: 'single',
-    requiresPhoto: true,
+    requiresPhoto: false,
     options: [
       { value: 'present', label: 'Присутствует' },
       { value: 'missing', label: 'Отсутствует' },
@@ -835,7 +852,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'noise', label: 'Посторонний шум' },
           { value: 'long_start', label: 'Длительный запуск' },
@@ -855,7 +872,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'noise', label: 'Посторонний шум' },
           { value: 'uneven', label: 'Неровная работа' },
@@ -874,7 +892,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'noise', label: 'Посторонний шум' },
           { value: 'jolts', label: 'Пинки / Толчки' },
@@ -893,7 +912,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'has_leaks',
         label: 'Есть течи',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'valve_cover', label: 'Течь клапанной крышки' },
           { value: 'turbo', label: 'Течь турбокомпрессора' },
@@ -914,7 +934,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'dirty', label: 'Загрязнен' },
           { value: 'moisture', label: 'Попадание влаги' },
@@ -935,7 +956,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'dirty', label: 'Загрязнен' },
           { value: 'moisture', label: 'Попадание влаги' },
@@ -956,7 +978,8 @@ export const checklistQuestions: ChecklistQuestion[] = [
       {
         value: 'bad',
         label: 'Неисправно',
-        requiresPhoto: true,
+        allowMultiple: true,
+        requiresPhoto: false,
         subOptions: [
           { value: 'dirty', label: 'Загрязнен' },
           { value: 'moisture', label: 'Попадание влаги' },
