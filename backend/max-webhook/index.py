@@ -2,8 +2,11 @@ import json
 import os
 import requests
 import psycopg2
+import boto3
+import base64
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from io import BytesIO
 
 # Хранилище сессий пользователей (в продакшене использовать Redis)
 user_sessions = {}
@@ -69,18 +72,31 @@ def handler(event: dict, context) -> dict:
 
 
 def handle_message(update: dict):
-    '''Обработка текстовых сообщений'''
+    '''Обработка текстовых сообщений и вложений'''
     message = update.get('message', {})
     sender_id = message.get('sender', {}).get('user_id')
     user_text = message.get('body', {}).get('text', '').strip()
+    attachments = message.get('body', {}).get('attachments', [])
     
     print(f"[DEBUG] Extracted sender_id: {sender_id}, text: {user_text}")
+    print(f"[DEBUG] Attachments: {attachments}")
     
     if not sender_id:
         print("[WARNING] No sender_id found, skipping message")
         return
     
     session = user_sessions.get(sender_id, {'step': 0})
+    
+    # Обработка фото в режиме чек-листа
+    if session.get('step') == 5 and session.get('waiting_for_photo'):
+        if attachments:
+            handle_photo_upload(sender_id, session, attachments)
+        else:
+            response_text = '⚠️ Пожалуйста, прикрепите фото дефекта или нажмите "Пропустить фото".'
+            buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
+            send_message(sender_id, response_text, buttons)
+        return
+    
     lower_text = user_text.lower()
     
     # Команды
@@ -239,6 +255,20 @@ def handle_callback(update: dict):
     elif payload.startswith('answer:'):
         # Обработка ответа на вопрос чек-листа
         handle_checklist_answer(sender_id, session, payload)
+    
+    elif payload == 'add_photo':
+        # Запрос на добавление фото
+        session['waiting_for_photo'] = True
+        user_sessions[sender_id] = session
+        response_text = '📸 Прикрепите фото дефекта в следующем сообщении.'
+        buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
+        send_message(sender_id, response_text, buttons)
+    
+    elif payload == 'skip_photo':
+        # Пропуск фото
+        session['waiting_for_photo'] = False
+        user_sessions[sender_id] = session
+        send_checklist_question(sender_id, session)
 
 
 def save_diagnostic(session: dict) -> int:
@@ -359,6 +389,11 @@ def send_checklist_question(sender_id: str, session: dict):
             'payload': f"answer:{question['id']}:{option['value']}"
         }])
     
+    # Кнопка добавления фото для "Неисправно"
+    has_bad_option = any(opt['value'] == 'bad' for opt in question['options'])
+    if has_bad_option:
+        buttons.append([{'type': 'callback', 'text': '📸 Прикрепить фото дефекта', 'payload': 'add_photo'}])
+    
     # Кнопка пропуска (если не последний вопрос)
     if question_index < len(questions) - 1:
         buttons.append([{'type': 'callback', 'text': '⏭ Пропустить', 'payload': f"answer:{question['id']}:skip"}])
@@ -385,6 +420,79 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
     user_sessions[sender_id] = session
     
     send_checklist_question(sender_id, session)
+
+
+def handle_photo_upload(sender_id: str, session: dict, attachments: list):
+    '''Обработка загрузки фото дефекта'''
+    try:
+        # Ищем фото в attachments
+        photo_url = None
+        for attachment in attachments:
+            if attachment.get('type') == 'image':
+                payload = attachment.get('payload', {})
+                photo_url = payload.get('url')
+                break
+        
+        if not photo_url:
+            response_text = '⚠️ Не найдено фото. Попробуйте ещё раз или пропустите.'
+            buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
+            send_message(sender_id, response_text, buttons)
+            return
+        
+        # Скачиваем фото
+        print(f"[DEBUG] Downloading photo from: {photo_url}")
+        photo_response = requests.get(photo_url, timeout=10)
+        
+        if photo_response.status_code != 200:
+            response_text = '⚠️ Не удалось загрузить фото. Попробуйте ещё раз.'
+            buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
+            send_message(sender_id, response_text, buttons)
+            return
+        
+        # Сохраняем фото в S3
+        diagnostic_id = session.get('diagnostic_id')
+        question_index = session.get('question_index', 0)
+        krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
+        now = datetime.now(krasnoyarsk_tz)
+        
+        file_key = f"diagnostics/{diagnostic_id}/question_{question_index + 1}_{now.strftime('%Y%m%d_%H%M%S')}.jpg"
+        
+        s3 = boto3.client('s3',
+            endpoint_url='https://bucket.poehali.dev',
+            aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+        )
+        
+        s3.put_object(
+            Bucket='files',
+            Key=file_key,
+            Body=photo_response.content,
+            ContentType='image/jpeg'
+        )
+        
+        cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
+        
+        # Сохраняем ссылку на фото в сессии
+        if 'photos' not in session:
+            session['photos'] = []
+        session['photos'].append({
+            'question_index': question_index,
+            'url': cdn_url
+        })
+        session['waiting_for_photo'] = False
+        user_sessions[sender_id] = session
+        
+        response_text = '✅ Фото дефекта сохранено!\n\nПродолжаем диагностику.'
+        send_message(sender_id, response_text)
+        
+        # Переход к следующему вопросу
+        send_checklist_question(sender_id, session)
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to upload photo: {str(e)}")
+        response_text = '⚠️ Ошибка при загрузке фото. Попробуйте ещё раз или пропустите.'
+        buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
+        send_message(sender_id, response_text, buttons)
 
 
 def save_checklist_answer(diagnostic_id: int, question_number: int, answer_value: str):
