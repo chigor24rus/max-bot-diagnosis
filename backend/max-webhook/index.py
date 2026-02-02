@@ -778,16 +778,25 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
             send_message(sender_id, response_text)
             return
     
-    # Проверяем логику пропуска вопросов
-    # Вопрос 26: если выбран "Не предусмотрено" - пропускаем вопрос 27
-    if question_id == 26 and answer_value == 'na':
-        # Пропускаем вопрос 27, переходим сразу к 28
+    # Проверяем логику пропуска вопросов при выборе "Не предусмотрено"
+    skip_logic = {
+        26: 28,  # Уровень масла ДВС → пропускаем 27 (Состояние масла ДВС)
+        28: 30,  # Уровень жидкости ГУР → пропускаем 29 (Состояние жидкости ГУР)
+        30: 34,  # Уровень ОЖ ДВС → пропускаем 31, 32, 33 (Цвет, Состояние, Температура)
+        34: 38,  # Уровень ОЖ HV → пропускаем 35, 36, 37 (Цвет, Состояние, Температура)
+        38: 42,  # Уровень ОЖ турбины → пропускаем 39, 40, 41 (Цвет, Состояние, Температура)
+        45: 47,  # Уровень масла КПП → пропускаем 46 (Состояние масла КПП)
+    }
+    
+    if question_id in skip_logic and answer_value == 'na':
+        # Находим целевой вопрос
+        target_question_id = skip_logic[question_id]
         questions = get_checklist_questions()
-        target_index = next((i for i, q in enumerate(questions) if q['id'] == 28), None)
+        target_index = next((i for i, q in enumerate(questions) if q['id'] == target_question_id), None)
         if target_index is not None:
             session['question_index'] = target_index
         else:
-            session['question_index'] += 2  # Пропускаем один вопрос
+            session['question_index'] += 1
     else:
         # Переход к следующему вопросу
         session['question_index'] += 1
@@ -1231,4 +1240,3 @@ def send_message(user_id: int, text: str, buttons: list = None):
         return response.json()
     except:
         return {}
-
