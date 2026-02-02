@@ -384,7 +384,11 @@ def handle_callback(update: dict):
     elif payload == 'skip_photo':
         # Пропуск фото
         session['waiting_for_photo'] = False
+        
+        # Переход к следующему вопросу
+        session['question_index'] += 1
         save_session(str(sender_id), session)
+        
         send_checklist_question(sender_id, session)
     
     elif payload == 'previous_question':
@@ -599,11 +603,6 @@ def send_checklist_question(sender_id: str, session: dict):
             'payload': f"answer:{question['id']}:{option['value']}"
         }])
     
-    # Кнопка добавления фото для "Неисправно"
-    has_bad_option = any(opt['value'] == 'bad' for opt in question['options'])
-    if has_bad_option:
-        buttons.append([{'type': 'callback', 'text': '📸 Прикрепить фото дефекта', 'payload': 'add_photo'}])
-    
     # Кнопка "Назад" (если это не первый вопрос)
     if question_index > 0:
         buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'previous_question'}])
@@ -737,11 +736,13 @@ def finish_sub_questions(sender_id: str, session: dict):
     session.pop('sub_question_path', None)
     session.pop('sub_selections', None)
     
-    # Переход к следующему вопросу
-    session['question_index'] += 1
-    save_session(str(sender_id), session)
-    
-    send_checklist_question(sender_id, session)
+    # Предлагаем прикрепить фото дефекта
+    response_text = '✅ Дефект зафиксирован!\n\nХотите прикрепить фото?'
+    buttons = [
+        [{'type': 'callback', 'text': '📸 Прикрепить фото', 'payload': 'add_photo'}],
+        [{'type': 'callback', 'text': '⏭ Пропустить', 'payload': 'skip_photo'}]
+    ]
+    send_message(sender_id, response_text, buttons)
 
 
 def handle_checklist_answer(sender_id: str, session: dict, payload: str):
@@ -777,6 +778,16 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
             response_text = '⚠️ Ошибка при сохранении ответа. Попробуйте ещё раз.'
             send_message(sender_id, response_text)
             return
+    
+    # Если выбран "Неисправно" без подпунктов - предлагаем фото
+    if answer_value == 'bad':
+        response_text = '✅ Дефект зафиксирован!\n\nХотите прикрепить фото?'
+        buttons = [
+            [{'type': 'callback', 'text': '📸 Прикрепить фото', 'payload': 'add_photo'}],
+            [{'type': 'callback', 'text': '⏭ Пропустить', 'payload': 'skip_photo'}]
+        ]
+        send_message(sender_id, response_text, buttons)
+        return
     
     # Проверяем логику пропуска вопросов при выборе "Не предусмотрено"
     skip_logic = {
