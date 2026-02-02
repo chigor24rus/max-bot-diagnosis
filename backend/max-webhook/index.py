@@ -985,9 +985,16 @@ def handle_nested_sub_answer(sender_id: str, session: dict, payload: str):
     sub_path = session.get('sub_question_path', [])
     main_option = next((opt for opt in question['options'] if opt['value'] == sub_path[0]), None)
     
+    print(f"[DEBUG] nested_sub_answer - sub_path: {sub_path}")
+    print(f"[DEBUG] nested_sub_answer - main_option: {main_option}")
+    print(f"[DEBUG] nested_sub_answer - allowMultiple: {main_option.get('allowMultiple') if main_option else None}")
+    print(f"[DEBUG] nested_sub_answer - sub_selections: {sub_selections}")
+    
     if main_option and main_option.get('allowMultiple'):
         # Проверяем остальные выбранные элементы
         selected_items = sub_selections.get('main', [])
+        print(f"[DEBUG] nested_sub_answer - selected_items: {selected_items}")
+        
         for selected_value in selected_items:
             sub_key = f'main-{selected_value}'
             if sub_key not in sub_selections:
@@ -998,10 +1005,12 @@ def handle_nested_sub_answer(sender_id: str, session: dict, payload: str):
                     return
         
         # Все вложенные подпункты собраны - возвращаемся к списку множественного выбора
+        print("[DEBUG] nested_sub_answer - returning to sub_question list")
         send_sub_question(sender_id, session)
         return
     
     # Одиночный выбор - завершаем
+    print("[DEBUG] nested_sub_answer - finishing sub_questions (single choice)")
     finish_sub_questions(sender_id, session)
 
 
