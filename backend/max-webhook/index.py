@@ -585,12 +585,17 @@ def send_checklist_question(sender_id: str, session: dict):
 
 def send_sub_question(sender_id: str, session: dict):
     '''Отправляет подвопросы (subOptions)'''
+    print(f"[DEBUG] send_sub_question called")
+    
     questions = get_checklist_questions()
     question_index = session.get('question_index', 0)
     question = questions[question_index]
     
     sub_path = session.get('sub_question_path', [])
     sub_selections = session.get('sub_selections', {})
+    
+    print(f"[DEBUG] sub_path: {sub_path}")
+    print(f"[DEBUG] sub_selections: {sub_selections}")
     
     # Находим текущий уровень subOptions
     current_option = None
@@ -600,14 +605,19 @@ def send_sub_question(sender_id: str, session: dict):
             break
     
     if not current_option or 'subOptions' not in current_option:
+        print(f"[ERROR] No current_option or no subOptions")
         # Нет подпунктов - завершаем режим подвопросов
         finish_sub_questions(sender_id, session)
         return
+    
+    print(f"[DEBUG] current_option: {current_option.get('label')}, allowMultiple: {current_option.get('allowMultiple')}")
     
     # Если allowMultiple и уже есть выборы на текущем уровне
     if current_option.get('allowMultiple') and sub_selections.get('main'):
         # Проверяем, нужно ли показать вложенные подпункты
         selected_items = sub_selections.get('main', [])
+        print(f"[DEBUG] Check nested: selected_items={selected_items}")
+        
         if isinstance(selected_items, list) and len(selected_items) > 0:
             # Проверяем, есть ли у выбранных элементов свои subOptions
             for selected_value in selected_items:
@@ -616,9 +626,11 @@ def send_sub_question(sender_id: str, session: dict):
                     # Нужно показать подпункты для этого элемента
                     sub_option = next((so for so in current_option['subOptions'] if so['value'] == selected_value), None)
                     if sub_option and 'subOptions' in sub_option:
+                        print(f"[DEBUG] Need nested question for {selected_value}")
                         send_nested_sub_question(sender_id, session, sub_option, selected_value)
                         return
             
+            print(f"[DEBUG] All nested questions answered, finishing")
             # Все подпункты собраны - завершаем
             finish_sub_questions(sender_id, session)
             return
@@ -642,11 +654,14 @@ def send_sub_question(sender_id: str, session: dict):
     buttons = []
     selected_values = sub_selections.get('main', []) if allow_multiple else []
     
+    print(f"[DEBUG] Building buttons, allow_multiple={allow_multiple}, selected_values={selected_values}")
+    
     for sub_opt in current_option['subOptions']:
         # Для множественного выбора добавляем галочку к выбранным
         label = sub_opt['label']
         if allow_multiple and sub_opt['value'] in selected_values:
             label = f"✓ {label}"
+            print(f"[DEBUG] Adding checkmark to {sub_opt['label']}")
         
         buttons.append([{
             'type': 'callback',
@@ -669,6 +684,7 @@ def send_sub_question(sender_id: str, session: dict):
         'payload': 'cancel_sub_question'
     }])
     
+    print(f"[DEBUG] Sending message with {len(buttons)} buttons")
     send_message(sender_id, response_text, buttons)
 
 
@@ -855,29 +871,42 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list):
 
 def handle_sub_answer(sender_id: str, session: dict, payload: str):
     '''Обработка ответа на подвопрос'''
+    print(f"[DEBUG] handle_sub_answer called with payload: {payload}")
+    
     # Парсим payload: "sub_answer:question_id:value"
     parts = payload.split(':')
     if len(parts) < 3:
+        print(f"[ERROR] Invalid payload format: {payload}")
         return
     
     question_id = int(parts[1])
     sub_value = parts[2]
     
+    print(f"[DEBUG] question_id: {question_id}, sub_value: {sub_value}")
+    
     questions = get_checklist_questions()
     question = next((q for q in questions if q['id'] == question_id), None)
     if not question:
+        print(f"[ERROR] Question {question_id} not found")
         return
     
     # Получаем текущую выбранную опцию
     sub_path = session.get('sub_question_path', [])
+    print(f"[DEBUG] sub_path: {sub_path}")
+    
     if not sub_path:
+        print("[ERROR] No sub_path in session")
         return
     
     main_option = next((opt for opt in question['options'] if opt['value'] == sub_path[0]), None)
     if not main_option:
+        print(f"[ERROR] Main option not found for sub_path[0]: {sub_path[0]}")
         return
     
+    print(f"[DEBUG] main_option: {main_option.get('label')}, allowMultiple: {main_option.get('allowMultiple')}")
+    
     sub_selections = session.get('sub_selections', {})
+    print(f"[DEBUG] Current sub_selections BEFORE toggle: {sub_selections}")
     
     # Если allowMultiple - добавляем/убираем из списка (toggle)
     if main_option.get('allowMultiple'):
@@ -886,19 +915,25 @@ def handle_sub_answer(sender_id: str, session: dict, payload: str):
         
         # Toggle: если уже выбран - убираем, если нет - добавляем
         if sub_value in sub_selections['main']:
+            print(f"[DEBUG] Removing {sub_value} from selection")
             sub_selections['main'].remove(sub_value)
             # Удаляем вложенные ответы для этого элемента
             sub_key = f'main-{sub_value}'
             sub_selections.pop(sub_key, None)
         else:
+            print(f"[DEBUG] Adding {sub_value} to selection")
             sub_selections['main'].append(sub_value)
+        
+        print(f"[DEBUG] sub_selections AFTER toggle: {sub_selections}")
         
         session['sub_selections'] = sub_selections
         save_session(str(sender_id), session)
         
+        print(f"[DEBUG] Calling send_sub_question to update list with checkmarks")
         # Обновляем список с галочками (НЕ показываем вложенные подпункты сразу)
         send_sub_question(sender_id, session)
     else:
+        print(f"[DEBUG] Single choice mode - setting main to {sub_value}")
         # Одиночный выбор
         sub_selections['main'] = sub_value
         session['sub_selections'] = sub_selections
@@ -907,8 +942,10 @@ def handle_sub_answer(sender_id: str, session: dict, payload: str):
         # Проверяем вложенные subOptions
         sub_option = next((so for so in main_option['subOptions'] if so['value'] == sub_value), None)
         if sub_option and 'subOptions' in sub_option:
+            print(f"[DEBUG] Found nested subOptions, showing nested question")
             send_nested_sub_question(sender_id, session, sub_option, sub_value)
         else:
+            print(f"[DEBUG] No nested subOptions, finishing sub questions")
             # Завершаем сбор подпунктов
             finish_sub_questions(sender_id, session)
 
