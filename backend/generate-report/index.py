@@ -2,6 +2,7 @@ import json
 import os
 import psycopg2
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
@@ -127,9 +128,12 @@ def handler(event: dict, context) -> dict:
             'des': 'ДЭС'
         }
         
+        krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
+        created_at_local = diagnostic_data['createdAt'].astimezone(krasnoyarsk_tz)
+        
         data = [
             ['№ диагностики:', str(diagnostic_data['id'])],
-            ['Дата:', diagnostic_data['createdAt'].strftime('%d.%m.%Y %H:%M')],
+            ['Дата:', created_at_local.strftime('%d.%m.%Y %H:%M')],
             ['Механик:', diagnostic_data['mechanic']],
             ['Госномер:', diagnostic_data['carNumber']],
             ['Пробег:', f"{diagnostic_data['mileage']:,} км".replace(',', ' ')],
@@ -180,7 +184,8 @@ def handler(event: dict, context) -> dict:
             aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
         )
         
-        file_key = f"reports/diagnostic_{diagnostic_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        now_krasnoyarsk = datetime.now(krasnoyarsk_tz)
+        file_key = f"reports/diagnostic_{diagnostic_id}_{now_krasnoyarsk.strftime('%Y%m%d_%H%M%S')}.pdf"
         s3.put_object(
             Bucket='files',
             Key=file_key,

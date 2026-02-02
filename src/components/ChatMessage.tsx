@@ -49,7 +49,8 @@ const ChatMessage = ({ message, isLoading, onButtonClick }: ChatMessageProps) =>
           <div className="text-xs text-slate-500 mt-2">
             {message.timestamp.toLocaleTimeString('ru-RU', { 
               hour: '2-digit', 
-              minute: '2-digit' 
+              minute: '2-digit',
+              timeZone: 'Asia/Krasnoyarsk'
             })}
           </div>
         </div>
