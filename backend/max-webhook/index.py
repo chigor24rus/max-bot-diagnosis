@@ -778,8 +778,20 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
             send_message(sender_id, response_text)
             return
     
-    # Переход к следующему вопросу
-    session['question_index'] += 1
+    # Проверяем логику пропуска вопросов
+    # Вопрос 26: если выбран "Не предусмотрено" - пропускаем вопрос 27
+    if question_id == 26 and answer_value == 'na':
+        # Пропускаем вопрос 27, переходим сразу к 28
+        questions = get_checklist_questions()
+        target_index = next((i for i, q in enumerate(questions) if q['id'] == 28), None)
+        if target_index is not None:
+            session['question_index'] = target_index
+        else:
+            session['question_index'] += 2  # Пропускаем один вопрос
+    else:
+        # Переход к следующему вопросу
+        session['question_index'] += 1
+    
     save_session(str(sender_id), session)
     
     send_checklist_question(sender_id, session)
@@ -1219,5 +1231,4 @@ def send_message(user_id: int, text: str, buttons: list = None):
         return response.json()
     except:
         return {}
-
 
