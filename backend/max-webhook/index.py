@@ -187,7 +187,14 @@ def handle_message(update: dict):
     elif step == 2:
         # Ввод госномера
         clean_number = user_text.upper().replace(' ', '').replace('-', '')
-        if len(clean_number) >= 5:
+        
+        # Проверка на кириллицу
+        has_cyrillic = any('А' <= char <= 'Я' or 'а' <= char <= 'я' for char in clean_number)
+        
+        if has_cyrillic:
+            response_text = '⚠️ Госномер должен содержать только латинские буквы.\n\nНапример: A159BK124 (не А159ВК124)'
+            send_message(sender_id, response_text)
+        elif len(clean_number) >= 5:
             session['car_number'] = clean_number
             session['step'] = 3
             save_session(str(sender_id), session)
@@ -441,10 +448,6 @@ def send_checklist_question(sender_id: str, session: dict):
     has_bad_option = any(opt['value'] == 'bad' for opt in question['options'])
     if has_bad_option:
         buttons.append([{'type': 'callback', 'text': '📸 Прикрепить фото дефекта', 'payload': 'add_photo'}])
-    
-    # Кнопка пропуска (если не последний вопрос)
-    if question_index < len(questions) - 1:
-        buttons.append([{'type': 'callback', 'text': '⏭ Пропустить', 'payload': f"answer:{question['id']}:skip"}])
     
     send_message(sender_id, response_text, buttons)
 
