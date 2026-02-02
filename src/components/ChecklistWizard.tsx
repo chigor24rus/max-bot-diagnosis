@@ -214,7 +214,7 @@ const ChecklistWizard = ({ onComplete, onCancel }: ChecklistWizardProps) => {
                 )}
                 {subOpt.label}
               </Button>
-              {!isMultiple && isSelected && subOpt.subOptions && (
+              {isSelected && subOpt.subOptions && (
                 <div className="ml-4 mt-2">
                   {renderSubOptions(subOpt, `${parentKey}-${subOpt.value}`)}
                 </div>
