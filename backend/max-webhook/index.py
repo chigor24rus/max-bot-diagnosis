@@ -403,9 +403,21 @@ def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
     try:
         # Извлекаем номер телефона из attachment
         contact_payload = contact_attachment.get('payload', {})
-        phone = contact_payload.get('phone', '').strip()
+        
+        # MAX отправляет телефон в VCard формате
+        vcf_info = contact_payload.get('vcf_info', '')
+        phone = ''
+        
+        # Парсим VCard для извлечения телефона
+        if vcf_info:
+            for line in vcf_info.split('\n'):
+                if line.startswith('TEL'):
+                    # Формат: TEL;TYPE=cell:79293372613
+                    phone = line.split(':')[-1].strip()
+                    break
         
         print(f"[DEBUG] Phone auth attempt: {phone}")
+        print(f"[DEBUG] VCF info: {vcf_info}")
         
         if not phone:
             response_text = '⚠️ Не удалось получить номер телефона. Попробуйте ещё раз.'
@@ -413,8 +425,10 @@ def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
             send_message(sender_id, response_text, buttons)
             return
         
-        # Нормализуем номер телефона (удаляем пробелы, дефисы)
+        # Нормализуем номер телефона (добавляем + если нет, удаляем пробелы, дефисы)
         clean_phone = phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+        if not clean_phone.startswith('+'):
+            clean_phone = '+' + clean_phone
         
         # Ищем механика по номеру телефона
         db_url = os.environ.get('DATABASE_URL')
