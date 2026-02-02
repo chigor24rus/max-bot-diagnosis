@@ -873,12 +873,20 @@ def handle_sub_answer(sender_id: str, session: dict, payload: str):
             sub_selections.pop(sub_key, None)
         else:
             sub_selections['main'].append(sub_value)
+            
+            # Проверяем, есть ли у ТОЛЬКО ЧТО выбранного элемента свои subOptions
+            sub_option = next((so for so in main_option['subOptions'] if so['value'] == sub_value), None)
+            if sub_option and 'subOptions' in sub_option:
+                # Сразу показываем вложенные подпункты для этого элемента
+                session['sub_selections'] = sub_selections
+                save_session(str(sender_id), session)
+                send_nested_sub_question(sender_id, session, sub_option, sub_value)
+                return
         
         session['sub_selections'] = sub_selections
         save_session(str(sender_id), session)
         
-        # НЕ переходим автоматически к вложенным подпунктам
-        # Пользователь должен нажать "Готово", чтобы продолжить
+        # Обновляем список с галочками
         send_sub_question(sender_id, session)
     else:
         # Одиночный выбор
