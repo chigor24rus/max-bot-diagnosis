@@ -472,13 +472,20 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list):
         
         cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
         
-        # Сохраняем ссылку на фото в сессии
-        if 'photos' not in session:
-            session['photos'] = []
-        session['photos'].append({
-            'question_index': question_index,
-            'url': cdn_url
-        })
+        # Сохраняем фото в базу данных
+        db_url = os.environ.get('DATABASE_URL')
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        conn = psycopg2.connect(db_url)
+        cur = conn.cursor()
+        
+        cur.execute(
+            f"INSERT INTO {schema}.diagnostic_photos (diagnostic_id, question_index, photo_url) "
+            f"VALUES ({diagnostic_id}, {question_index}, '{cdn_url}')"
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+        
         session['waiting_for_photo'] = False
         user_sessions[sender_id] = session
         
@@ -549,15 +556,25 @@ def finish_checklist(sender_id: str, session: dict):
     '''Завершение чек-листа и генерация отчета'''
     diagnostic_id = session.get('diagnostic_id')
     
-    # Запрос на генерацию PDF
-    report_url = f"https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6?id={diagnostic_id}"
+    # Генерируем оба варианта отчёта
+    report_url_base = "https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6"
     
     try:
-        response = requests.get(report_url, timeout=30)
-        if response.status_code == 200:
-            result = response.json()
-            pdf_url = result.get('pdfUrl')
-            
+        # Отчёт без фото
+        response_no_photos = requests.get(f"{report_url_base}?id={diagnostic_id}", timeout=30)
+        pdf_url_no_photos = None
+        if response_no_photos.status_code == 200:
+            result = response_no_photos.json()
+            pdf_url_no_photos = result.get('pdfUrl')
+        
+        # Отчёт с фото
+        response_with_photos = requests.get(f"{report_url_base}?id={diagnostic_id}&with_photos=true", timeout=30)
+        pdf_url_with_photos = None
+        if response_with_photos.status_code == 200:
+            result = response_with_photos.json()
+            pdf_url_with_photos = result.get('pdfUrl')
+        
+        if pdf_url_no_photos and pdf_url_with_photos:
             response_text = f'''✅ Диагностика №{diagnostic_id} завершена!
 
 📋 Сводка:
@@ -568,8 +585,24 @@ def finish_checklist(sender_id: str, session: dict):
 🔧 Тип: 5-ти минутка
 ━━━━━━━━━━━━━━━━
 
-📄 Отчет готов!
-{pdf_url}'''.replace(',', ' ')
+📄 Отчёты готовы!
+
+Без фото: {pdf_url_no_photos}
+
+С фото: {pdf_url_with_photos}'''.replace(',', ' ')
+        elif pdf_url_no_photos:
+            response_text = f'''✅ Диагностика №{diagnostic_id} завершена!
+
+📋 Сводка:
+━━━━━━━━━━━━━━━━
+👤 Механик: {session['mechanic']}
+🚗 Госномер: {session['car_number']}
+🛣 Пробег: {session['mileage']:,} км
+🔧 Тип: 5-ти минутка
+━━━━━━━━━━━━━━━━
+
+📄 Отчёт готов!
+{pdf_url_no_photos}'''.replace(',', ' ')
         else:
             response_text = f'''✅ Диагностика №{diagnostic_id} завершена!
 

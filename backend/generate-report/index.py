@@ -46,6 +46,7 @@ def handler(event: dict, context) -> dict:
     
     query_params = event.get('queryStringParameters', {}) or {}
     diagnostic_id = query_params.get('id')
+    with_photos = query_params.get('with_photos', 'false').lower() == 'true'
     
     if not diagnostic_id:
         return {
@@ -92,10 +93,22 @@ def handler(event: dict, context) -> dict:
         }
         
         cur.execute(
-            f"SELECT question_text, answer_value, sub_answers FROM {schema}.checklist_answers "
+            f"SELECT question_number, question_text, answer_value, sub_answers FROM {schema}.checklist_answers "
             f"WHERE diagnostic_id = {diagnostic_id} ORDER BY question_number"
         )
         checklist_rows = cur.fetchall()
+        
+        photos_by_question = {}
+        if with_photos:
+            cur.execute(
+                f"SELECT question_index, photo_url FROM {schema}.diagnostic_photos "
+                f"WHERE diagnostic_id = {diagnostic_id} ORDER BY question_index, created_at"
+            )
+            photo_rows = cur.fetchall()
+            for question_idx, photo_url in photo_rows:
+                if question_idx not in photos_by_question:
+                    photos_by_question[question_idx] = []
+                photos_by_question[question_idx].append(photo_url)
         
         defect_labels = {
             'chips': 'Сколы',
@@ -205,15 +218,15 @@ def handler(event: dict, context) -> dict:
         working_items = []
         broken_items = []
         
-        for question, answer, sub_answers in checklist_rows:
+        for question_num, question, answer, sub_answers in checklist_rows:
             if answer == 'Исправно':
                 working_items.append(question)
             elif answer == 'Неисправно':
                 defect_details = parse_defects(sub_answers)
                 if defect_details:
-                    broken_items.append(f'{question}: {", ".join(defect_details)}')
+                    broken_items.append((question_num, f'{question}: {", ".join(defect_details)}'))
                 else:
-                    broken_items.append(question)
+                    broken_items.append((question_num, question))
         
         font_path = '/tmp/DejaVuSans.ttf'
         
@@ -311,23 +324,23 @@ def handler(event: dict, context) -> dict:
         
         if broken_items:
             story.append(Paragraph('Обнаруженные неисправности:', section_style))
-            for item in broken_items:
+            for question_num, item in broken_items:
                 story.append(Paragraph(f'• {item}', item_style))
+                
+                if with_photos and question_num in photos_by_question:
+                    story.append(Spacer(1, 2*mm))
+                    for photo_url in photos_by_question[question_num]:
+                        try:
+                            photo_response = urllib.request.urlopen(photo_url)
+                            photo_data = photo_response.read()
+                            img_reader = ImageReader(BytesIO(photo_data))
+                            img = Image(img_reader, width=120*mm, height=90*mm)
+                            story.append(img)
+                            story.append(Spacer(1, 2*mm))
+                        except Exception as e:
+                            print(f"[WARNING] Could not load photo {photo_url}: {str(e)}")
+            
             story.append(Spacer(1, 8*mm))
-        
-        story.append(Spacer(1, 10*mm))
-        
-        signature_style = ParagraphStyle(
-            'Signature',
-            fontName=font_name,
-            fontSize=11,
-            alignment=TA_LEFT,
-            spaceAfter=3
-        )
-        
-        story.append(Paragraph('Механик: __________________________________', signature_style))
-        story.append(Spacer(1, 2*mm))
-        story.append(Paragraph('<font size=9 color="#666666">(подпись)</font>', signature_style))
         
         doc.build(story)
         
@@ -341,7 +354,8 @@ def handler(event: dict, context) -> dict:
         )
         
         now_krasnoyarsk = datetime.now(krasnoyarsk_tz)
-        file_key = f"reports/diagnostic_{diagnostic_id}_{now_krasnoyarsk.strftime('%Y%m%d_%H%M%S')}.pdf"
+        photo_suffix = '_with_photos' if with_photos else ''
+        file_key = f"reports/diagnostic_{diagnostic_id}{photo_suffix}_{now_krasnoyarsk.strftime('%Y%m%d_%H%M%S')}.pdf"
         s3.put_object(
             Bucket='files',
             Key=file_key,
