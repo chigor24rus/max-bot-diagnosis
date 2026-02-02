@@ -18,7 +18,7 @@ const BotInfo = () => {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="text-center space-y-4">
-            <p className="text-slate-300 leading-relaxed">
+            <p className="text-slate-100 leading-relaxed">
               Умный помощник для проведения диагностики автомобилей в автосервисе.
               Автоматизирует процесс осмотра, сохраняет данные и генерирует отчёты.
             </p>
@@ -38,7 +38,7 @@ const BotInfo = () => {
               <Icon name="Sparkles" size={20} className="text-primary" />
               Возможности
             </h3>
-            <ul className="space-y-2 text-slate-300 text-sm">
+            <ul className="space-y-2 text-slate-100 text-sm">
               <li className="flex items-start gap-2">
                 <Icon name="CheckCircle2" size={16} className="text-green-400 mt-0.5 flex-shrink-0" />
                 <span>Пошаговая диагностика с выбором механика и типа осмотра</span>
@@ -76,19 +76,19 @@ const BotInfo = () => {
                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-mono">
                   /start
                 </Badge>
-                <span className="text-slate-300 text-sm">Начать новую диагностику</span>
+                <span className="text-slate-100 text-sm">Начать новую диагностику</span>
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-mono">
                   /cancel
                 </Badge>
-                <span className="text-slate-300 text-sm">Отменить текущую операцию</span>
+                <span className="text-slate-100 text-sm">Отменить текущую операцию</span>
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-mono">
                   /help
                 </Badge>
-                <span className="text-slate-300 text-sm">Показать список команд</span>
+                <span className="text-slate-100 text-sm">Показать список команд</span>
               </div>
             </div>
           </div>
@@ -101,15 +101,15 @@ const BotInfo = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
                 <div className="text-primary font-semibold mb-1">5-ти минутка</div>
-                <div className="text-xs text-slate-400">Быстрый осмотр</div>
+                <div className="text-xs text-slate-200">Быстрый осмотр</div>
               </div>
               <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
                 <div className="text-primary font-semibold mb-1">ДХЧ</div>
-                <div className="text-xs text-slate-400">Диагностика ходовой части</div>
+                <div className="text-xs text-slate-200">Диагностика ходовой части</div>
               </div>
               <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
                 <div className="text-primary font-semibold mb-1">ДЭС</div>
-                <div className="text-xs text-slate-400">Диагностика электросистем</div>
+                <div className="text-xs text-slate-200">Диагностика электросистем</div>
               </div>
             </div>
           </div>
@@ -117,7 +117,7 @@ const BotInfo = () => {
           <div className="bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg p-4 border border-primary/20">
             <div className="flex items-start gap-3">
               <Icon name="Info" size={20} className="text-primary mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-slate-300">
+              <div className="text-sm text-slate-100">
                 <p className="font-semibold mb-1">Совет:</p>
                 <p>Бот понимает естественный язык — просто напишите что вам нужно, и он поможет!</p>
               </div>
