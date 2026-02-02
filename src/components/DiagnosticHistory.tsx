@@ -123,7 +123,7 @@ const DiagnosticHistory = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', { 
+    const formatter = new Intl.DateTimeFormat('ru-RU', { 
       day: '2-digit', 
       month: '2-digit', 
       year: 'numeric',
@@ -131,6 +131,7 @@ const DiagnosticHistory = () => {
       minute: '2-digit',
       timeZone: 'Asia/Krasnoyarsk'
     });
+    return formatter.format(date);
   };
 
   if (loading) {
