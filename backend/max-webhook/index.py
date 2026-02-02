@@ -679,9 +679,13 @@ def send_sub_question(sender_id: str, session: dict):
     else:
         result = send_message(sender_id, response_text, buttons)
         # Сохраняем message_id для последующих обновлений
-        if result and 'message_id' in result:
-            session['sub_question_message_id'] = result['message_id']
-            save_session(str(sender_id), session)
+        # API MAX возвращает mid в message.body.mid
+        if result and 'message' in result:
+            mid = result.get('message', {}).get('body', {}).get('mid')
+            if mid:
+                session['sub_question_message_id'] = mid
+                save_session(str(sender_id), session)
+                print(f"[DEBUG] Saved message_id for future updates: {mid}")
 
 
 def send_nested_sub_question(sender_id: str, session: dict, parent_option: dict, parent_value: str):
