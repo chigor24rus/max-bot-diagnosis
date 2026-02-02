@@ -5,6 +5,7 @@ import DiagnosticHistory from '@/components/DiagnosticHistory';
 import BotInfo from '@/components/BotInfo';
 import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
+import ChecklistWizard from '@/components/ChecklistWizard';
 import { useChatLogic } from '@/hooks/useChatLogic';
 
 const Index = () => {
@@ -19,7 +20,9 @@ const Index = () => {
     inputRef,
     handleButtonClick,
     handleSendMessage,
-    checkedItems
+    showChecklistWizard,
+    handleChecklistComplete,
+    handleChecklistCancel
   } = useChatLogic();
 
   return (
@@ -52,26 +55,36 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="chat" className="flex-1 flex flex-col overflow-hidden m-0">
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
-              {messages.map((message) => (
-                <ChatMessage
-                  key={message.id}
-                  message={message}
-                  isLoading={isLoading}
-                  onButtonClick={handleButtonClick}
-                  checkedItems={checkedItems}
+            {showChecklistWizard ? (
+              <div className="flex-1 overflow-y-auto p-4">
+                <ChecklistWizard
+                  onComplete={handleChecklistComplete}
+                  onCancel={handleChecklistCancel}
                 />
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
+                  {messages.map((message) => (
+                    <ChatMessage
+                      key={message.id}
+                      message={message}
+                      isLoading={isLoading}
+                      onButtonClick={handleButtonClick}
+                    />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
 
-            <ChatInput
-              inputValue={inputValue}
-              isLoading={isLoading}
-              inputRef={inputRef}
-              onInputChange={setInputValue}
-              onSend={handleSendMessage}
-            />
+                <ChatInput
+                  inputValue={inputValue}
+                  isLoading={isLoading}
+                  inputRef={inputRef}
+                  onInputChange={setInputValue}
+                  onSend={handleSendMessage}
+                />
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="history" className="flex-1 overflow-y-auto m-0">

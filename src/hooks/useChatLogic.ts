@@ -14,16 +14,15 @@ export const diagnosticTypes = [
   { value: 'des', label: 'ДЭС' }
 ];
 
-export const checklistItems5min = [
-  'Уровень масла в ДВС',
-  'Уровень охлаждающей жидкости',
-  'Уровень тормозной жидкости',
-  'Состояние аккумулятора',
-  'Давление в шинах',
-  'Работа световых приборов',
-  'Состояние щеток стеклоочистителей',
-  'Уровень жидкости стеклоомывателя'
-];
+export type ChecklistAnswer = {
+  questionId: number;
+  questionText: string;
+  answerValue: string;
+  answerLabel: string;
+  subAnswers?: Record<string, any>;
+  textInput?: string;
+  photoUrls?: string[];
+};
 
 export type Message = {
   id: number;
@@ -52,7 +51,8 @@ export const useChatLogic = () => {
   const [diagnosticType, setDiagnosticType] = useState('');
   const [diagnosticId, setDiagnosticId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [checkedItems, setCheckedItems] = useState<string[]>([]);
+  const [checklistAnswers, setChecklistAnswers] = useState<ChecklistAnswer[]>([]);
+  const [showChecklistWizard, setShowChecklistWizard] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -94,7 +94,8 @@ export const useChatLogic = () => {
     setMileage('');
     setDiagnosticType('');
     setDiagnosticId(null);
-    setCheckedItems([]);
+    setChecklistAnswers([]);
+    setShowChecklistWizard(false);
     addBotMessage(
       'Чат сброшен! Введите /start чтобы начать новую диагностику.',
       ['Начать диагностику']
@@ -114,17 +115,19 @@ export const useChatLogic = () => {
     
     if (type === '5min') {
       setCurrentStep(4.5);
-      setCheckedItems([]);
+      setChecklistAnswers([]);
+      setShowChecklistWizard(true);
+      addUserMessage('5-ти минутка');
+      setIsLoading(true);
       addBotMessage(
-        '📋 Отлично! Начинаем диагностику "5-ти минутка".\n\nПроверьте следующие пункты и отмечайте их по мере выполнения:',
-        checklistItems5min
+        '📋 Отлично! Начинаем диагностику "5-ти минутка".\n\nСейчас откроется пошаговый мастер с 55 пунктами проверки автомобиля.'
       );
     } else {
-      saveDiagnostic(type);
+      saveDiagnostic(type, []);
     }
   };
 
-  const saveDiagnostic = async (type: string) => {
+  const saveDiagnostic = async (type: string, answers: ChecklistAnswer[] = []) => {
     setIsLoading(true);
     
     addBotMessage('⏳ Сохраняю данные диагностики в базу...');
@@ -139,7 +142,8 @@ export const useChatLogic = () => {
           mechanic,
           carNumber,
           mileage: parseInt(mileage),
-          diagnosticType: type
+          diagnosticType: type,
+          checklistAnswers: answers
         })
       });
       
@@ -322,23 +326,15 @@ export const useChatLogic = () => {
     }
   };
 
-  const toggleChecklistItem = (item: string) => {
-    setCheckedItems(prev => {
-      const newChecked = prev.includes(item)
-        ? prev.filter(i => i !== item)
-        : [...prev, item];
-      
-      if (newChecked.length === checklistItems5min.length) {
-        setTimeout(() => {
-          addBotMessage(
-            '✅ Все пункты проверены! Сохраняю результаты диагностики...',
-            ['Завершить и сохранить']
-          );
-        }, 500);
-      }
-      
-      return newChecked;
-    });
+  const handleChecklistComplete = (answers: ChecklistAnswer[]) => {
+    setChecklistAnswers(answers);
+    setShowChecklistWizard(false);
+    saveDiagnostic(diagnosticType, answers);
+  };
+
+  const handleChecklistCancel = () => {
+    setShowChecklistWizard(false);
+    resetChat();
   };
 
   const handleButtonClick = (buttonText: string) => {
@@ -360,13 +356,7 @@ export const useChatLogic = () => {
         handleDiagnosticTypeSelect(selectedType.value);
       }
     }
-    else if (checklistItems5min.includes(buttonText)) {
-      toggleChecklistItem(buttonText);
-      setIsLoading(false);
-    }
-    else if (buttonText === 'Завершить и сохранить') {
-      saveDiagnostic(diagnosticType);
-    }
+
     else if (buttonText === 'Скачать PDF отчёт') {
       handleGenerateReport();
     } 
@@ -397,6 +387,9 @@ export const useChatLogic = () => {
     inputRef,
     handleButtonClick,
     handleSendMessage,
-    checkedItems
+    checklistAnswers,
+    showChecklistWizard,
+    handleChecklistComplete,
+    handleChecklistCancel
   };
 };

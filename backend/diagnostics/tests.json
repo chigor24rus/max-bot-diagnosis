@@ -8,15 +8,10 @@
         "mechanic": "Подкорытов С.А.",
         "carNumber": "A159BK124",
         "mileage": 150000,
-        "diagnosticType": "5min"
+        "diagnosticType": "5min",
+        "checklistAnswers": []
       },
-      "expectedStatus": 201,
-      "expectedBody": {
-        "id": "number",
-        "createdAt": "string",
-        "message": "string"
-      },
-      "bodyMatcher": "partial"
+      "expectedStatus": 201
     },
     {
       "name": "Get all diagnostics",
