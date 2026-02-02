@@ -102,7 +102,7 @@ def handler(event: dict, context) -> dict:
         
         header_image_path = '/tmp/hevsr_header.png'
         if not os.path.exists(header_image_path):
-            header_url = 'https://cdn.poehali.dev/projects/4bb6cea8-8d41-426a-b677-f4304502c188/bucket/c05eb0e1-e779-4faf-b40c-632733644c8d.png'
+            header_url = 'https://cdn.poehali.dev/projects/4bb6cea8-8d41-426a-b677-f4304502c188/bucket/e0986711-d405-44d1-a66b-83e4a1ba096d.png'
             urllib.request.urlretrieve(header_url, header_image_path)
         
         pdf_buffer = BytesIO()
