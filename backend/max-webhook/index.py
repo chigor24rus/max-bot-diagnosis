@@ -340,9 +340,12 @@ def save_diagnostic(session: dict) -> int:
         mileage = session.get('mileage', 0)
         diagnostic_type = session.get('diagnostic_type', '')
         
+        krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
+        now = datetime.now(krasnoyarsk_tz)
+        
         cur.execute(
-            f"INSERT INTO {schema}.diagnostics (mechanic, car_number, mileage, diagnostic_type) "
-            f"VALUES ('{mechanic}', '{car_number}', {mileage}, '{diagnostic_type}') RETURNING id"
+            f"INSERT INTO {schema}.diagnostics (mechanic, car_number, mileage, diagnostic_type, created_at, updated_at) "
+            f"VALUES ('{mechanic}', '{car_number}', {mileage}, '{diagnostic_type}', '{now.isoformat()}', '{now.isoformat()}') RETURNING id"
         )
         
         result = cur.fetchone()
