@@ -7,11 +7,12 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import boto3
 from io import BytesIO
+import urllib.request
 
 def handler(event: dict, context) -> dict:
     '''API для генерации PDF отчёта по диагностике автомобиля'''
@@ -88,6 +89,20 @@ def handler(event: dict, context) -> dict:
             'createdAt': row[5]
         }
         
+        font_path = '/tmp/DejaVuSans.ttf'
+        if not os.path.exists(font_path):
+            font_url = 'https://cdn.jsdelivr.net/gh/dejavu-fonts/dejavu-fonts@master/ttf/DejaVuSans.ttf'
+            try:
+                urllib.request.urlretrieve(font_url, font_path)
+            except:
+                pass
+        
+        try:
+            pdfmetrics.registerFont(TTFont('DejaVu', font_path))
+            font_name = 'DejaVu'
+        except:
+            font_name = 'Helvetica'
+        
         pdf_buffer = BytesIO()
         doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, topMargin=15*mm, bottomMargin=15*mm)
         
@@ -98,6 +113,7 @@ def handler(event: dict, context) -> dict:
             'CustomTitle',
             parent=styles['Heading1'],
             fontSize=18,
+            fontName=font_name,
             alignment=TA_CENTER,
             spaceAfter=20
         )
@@ -143,7 +159,7 @@ def handler(event: dict, context) -> dict:
         
         sig_table = Table(signature_data, colWidths=[30*mm, 100*mm])
         sig_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTNAME', (0, 0), (-1, -1), font_name),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
             ('ALIGN', (1, 0), (1, -1), 'CENTER'),
