@@ -153,12 +153,12 @@ def handle_message(update: dict):
     
     # Команды
     if lower_text in ['/start', 'начать', 'старт']:
-        # Проверяем, авторизован ли пользователь
-        if session.get('user_id') and session.get('phone'):
+        # Проверяем, авторизован ли пользователь (проверка mechanic_id вместо user_id)
+        if session.get('mechanic_id'):
             # Уже авторизован - сразу начинаем диагностику с госномера
             session['step'] = 2
             save_session(str(sender_id), session)
-            response_text = f'👋 С возвращением, {session.get("user_name", "")}!\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
+            response_text = f'👋 С возвращением, {session.get("mechanic", "")}!\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
             send_message(sender_id, response_text)
         else:
             # Не авторизован - запрашиваем телефон
@@ -256,8 +256,8 @@ def handle_callback(update: dict):
     session = get_session(str(sender_id))
     
     if payload == 'start':
-        # Проверяем, авторизован ли пользователь
-        if session.get('user_id') and session.get('phone'):
+        # Проверяем, авторизован ли пользователь (проверка mechanic_id)
+        if session.get('mechanic_id'):
             # Уже авторизован - сразу начинаем диагностику с госномера
             session['step'] = 2
             save_session(str(sender_id), session)
@@ -499,6 +499,9 @@ def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
         # Сохраняем механика в сессии
         session['mechanic'] = mechanic_name
         session['mechanic_id'] = mechanic_id
+        session['user_id'] = mechanic_id  # Для проверки авторизации
+        session['user_name'] = mechanic_name
+        session['phone'] = clean_phone
         session['step'] = 2
         save_session(str(sender_id), session)
         
