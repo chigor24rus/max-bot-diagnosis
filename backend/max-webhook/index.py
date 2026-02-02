@@ -283,6 +283,13 @@ def handle_callback(update: dict):
             # Сохраняем диагностику в БД
             diagnostic_id = save_diagnostic(session)
             if diagnostic_id:
+                # Очищаем данные предыдущей диагностики
+                session.pop('sub_question_mode', None)
+                session.pop('sub_question_path', None)
+                session.pop('sub_selections', None)
+                session.pop('sub_question_message_id', None)
+                session.pop('waiting_for_photo', None)
+                
                 session['diagnostic_id'] = diagnostic_id
                 session['question_index'] = 0
                 session['step'] = 5
