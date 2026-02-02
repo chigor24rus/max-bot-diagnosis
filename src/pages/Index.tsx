@@ -120,7 +120,24 @@ const Index = () => {
       }
     }
     else if (currentStep === 2) {
+      // Проверяем наличие кириллицы
+      const hasCyrillic = /[А-Яа-яЁё]/.test(text);
+      if (hasCyrillic) {
+        addBotMessage(
+          '❌ Обнаружены русские буквы!\n\n⚠️ Госномер должен быть введён ТОЛЬКО латинскими буквами (A-Z).\n\nНапример:\n✅ A159BK124 (правильно)\n❌ А159ВК124 (неправильно - русские буквы)\n\nПопробуйте ещё раз:'
+        );
+        return;
+      }
+      
       const cleanNumber = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      // Дополнительная проверка - должны быть только латинские буквы
+      if (!/^[A-Z0-9]+$/.test(cleanNumber)) {
+        addBotMessage(
+          '⚠️ Используйте только латинские буквы (A-Z) и цифры!\n\nНапример: A159BK124'
+        );
+        return;
+      }
+      
       if (cleanNumber.length >= 5) {
         setCarNumber(cleanNumber);
         setCurrentStep(3);
@@ -199,7 +216,7 @@ const Index = () => {
     setMechanic(selectedMechanic);
     setCurrentStep(2);
     addBotMessage(
-      `✅ Отлично! Механик ${selectedMechanic} выбран.\n\nТеперь введите государственный номер автомобиля (в латинице).\n\nНапример: A159BK124`
+      `✅ Отлично! Механик ${selectedMechanic} выбран.\n\nТеперь введите государственный номер автомобиля.\n\n⚠️ ВАЖНО: Используйте только латинские буквы (A-Z) и цифры!\nНапример: A159BK124 или B777CC777`
     );
   };
 
