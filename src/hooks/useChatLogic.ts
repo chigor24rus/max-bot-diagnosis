@@ -376,6 +376,13 @@ export const useChatLogic = () => {
     processUserMessage(userText);
   };
 
+  const handleCommand = (command: string) => {
+    if (isLoading) return;
+    addUserMessage(command);
+    setIsLoading(true);
+    processUserMessage(command);
+  };
+
   return {
     activeTab,
     setActiveTab,
@@ -387,6 +394,7 @@ export const useChatLogic = () => {
     inputRef,
     handleButtonClick,
     handleSendMessage,
+    handleCommand,
     checklistAnswers,
     showChecklistWizard,
     handleChecklistComplete,

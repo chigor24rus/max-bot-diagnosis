@@ -20,6 +20,7 @@ const Index = () => {
     inputRef,
     handleButtonClick,
     handleSendMessage,
+    handleCommand,
     showChecklistWizard,
     handleChecklistComplete,
     handleChecklistCancel
@@ -82,6 +83,7 @@ const Index = () => {
                   inputRef={inputRef}
                   onInputChange={setInputValue}
                   onSend={handleSendMessage}
+                  onCommand={handleCommand}
                 />
               </>
             )}
