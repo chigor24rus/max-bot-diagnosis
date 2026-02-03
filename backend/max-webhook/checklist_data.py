@@ -502,9 +502,10 @@ def get_checklist_questions_full():
             'id': 27,
             'title': 'Состояние масла ДВС',
             'options': [
-                {'value': 'ok', 'label': 'Чистое'},
-                {'value': 'bad', 'label': 'Грязное'},
-                {'value': 'na', 'label': 'Не предусмотрено'},
+                {'value': 'fresh', 'label': 'Свежее'},
+                {'value': 'working', 'label': 'Рабочее'},
+                {'value': 'particles', 'label': 'С механическими примесями'},
+                {'value': 'water', 'label': 'Примеси воды / антифриза'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
