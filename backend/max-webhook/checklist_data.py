@@ -341,7 +341,15 @@ def get_checklist_questions_full():
             'title': 'Подсветка госномера',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
-                {'value': 'bad', 'label': 'Неисправно'},
+                {
+                    'value': 'bad',
+                    'label': 'Неисправно',
+                    'allowMultiple': True,
+                    'subOptions': [
+                        {'value': 'right', 'label': 'Справа'},
+                        {'value': 'left', 'label': 'Слева'},
+                    ],
+                },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
