@@ -132,7 +132,7 @@ def handler(event: dict, context) -> dict:
             'check_engine': 'Check Engine',
             'hybrid': 'Hybrid System / IMA',
             'engine': 'Двигатель',
-            'battery': 'Батарея',
+            'battery': 'АКБ',
             'oil': 'Масло',
             'brake': 'Тормоза',
             'right_mirror': 'Правое зеркало',
