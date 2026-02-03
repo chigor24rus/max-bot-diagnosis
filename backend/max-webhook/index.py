@@ -817,6 +817,15 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
         45: 47,  # Уровень масла КПП (na или need_disassembly) → пропускаем 46 (Состояние масла КПП)
     }
     
+    # Специальная обработка вопроса 55 (Иные замечания)
+    if question_id == 55 and answer_value == 'add_notes':
+        session['waiting_for_text'] = True
+        session['waiting_for_text_question_id'] = question_id
+        save_session(str(sender_id), session)
+        response_text = '✏️ Укажите замечания текстом:'
+        send_message(sender_id, response_text)
+        return
+    
     # Проверяем условия пропуска
     should_skip = False
     target_question_id = None
@@ -1138,6 +1147,10 @@ def save_checklist_answer_with_subs(diagnostic_id: int, question_number: int, an
             answer_val = 'Есть течи'
         elif answer_value == 'complete':
             answer_val = 'Завершить, замечаний нет'
+        elif answer_value == 'add_notes':
+            answer_val = 'Добавить замечания'
+        elif answer_value == 'need_disassembly':
+            answer_val = 'Требуется дополнительный разбор'
         else:
             # Найдем label в опциях
             option = next((opt for opt in question['options'] if opt['value'] == answer_value), None)
