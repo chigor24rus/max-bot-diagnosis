@@ -2,6 +2,7 @@ import json
 import os
 import requests
 import psycopg2
+from psycopg2 import pool
 import boto3
 import base64
 from datetime import datetime
@@ -9,22 +10,33 @@ from zoneinfo import ZoneInfo
 from io import BytesIO
 from checklist_data import get_checklist_questions_full
 
+# Connection pool для оптимизации работы с БД
+_db_pool = None
+
+def get_db_pool():
+    '''Получение connection pool (singleton)'''
+    global _db_pool
+    if _db_pool is None:
+        db_url = os.environ.get('DATABASE_URL')
+        _db_pool = pool.SimpleConnectionPool(1, 5, db_url)
+    return _db_pool
+
 
 def get_session(user_id: str) -> dict:
     '''Получение сессии пользователя из БД'''
+    conn = None
     try:
-        db_url = os.environ.get('DATABASE_URL')
         schema = os.environ.get('MAIN_DB_SCHEMA')
-        conn = psycopg2.connect(db_url)
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
         cur = conn.cursor()
         
         cur.execute(
-            f"SELECT session_data FROM {schema}.max_sessions WHERE user_id = '{user_id}'"
+            f"SELECT session_data FROM {schema}.max_sessions WHERE user_id = %s",
+            (user_id,)
         )
         row = cur.fetchone()
-        
         cur.close()
-        conn.close()
         
         if row:
             return row[0]
@@ -32,29 +44,36 @@ def get_session(user_id: str) -> dict:
     except Exception as e:
         print(f"[ERROR] Failed to get session: {str(e)}")
         return {'step': 0}
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
 
 
 def save_session(user_id: str, session: dict):
     '''Сохранение сессии пользователя в БД'''
+    conn = None
     try:
-        db_url = os.environ.get('DATABASE_URL')
         schema = os.environ.get('MAIN_DB_SCHEMA')
-        conn = psycopg2.connect(db_url)
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
         cur = conn.cursor()
         
-        session_json = json.dumps(session, ensure_ascii=False).replace("'", "''")
+        session_json = json.dumps(session, ensure_ascii=False)
         
         cur.execute(
             f"INSERT INTO {schema}.max_sessions (user_id, session_data, updated_at) "
-            f"VALUES ('{user_id}', '{session_json}'::jsonb, CURRENT_TIMESTAMP) "
-            f"ON CONFLICT (user_id) DO UPDATE SET session_data = '{session_json}'::jsonb, updated_at = CURRENT_TIMESTAMP"
+            f"VALUES (%s, %s::jsonb, CURRENT_TIMESTAMP) "
+            f"ON CONFLICT (user_id) DO UPDATE SET session_data = %s::jsonb, updated_at = CURRENT_TIMESTAMP",
+            (user_id, session_json, session_json)
         )
         
         conn.commit()
         cur.close()
-        conn.close()
     except Exception as e:
         print(f"[ERROR] Failed to save session: {str(e)}")
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
 
 def handler(event: dict, context) -> dict:
     '''Webhook для приёма сообщений от MAX бота и отправки ответов'''
@@ -405,17 +424,19 @@ def handle_callback(update: dict):
         diagnostic_id = session.get('diagnostic_id')
         
         if diagnostic_id:
+            prev_conn = None
             try:
-                db_url = os.environ.get('DATABASE_URL')
                 schema = os.environ.get('MAIN_DB_SCHEMA')
-                conn = psycopg2.connect(db_url)
-                cur = conn.cursor()
+                db_pool = get_db_pool()
+                prev_conn = db_pool.getconn()
+                cur = prev_conn.cursor()
                 
                 # Находим последний отвеченный вопрос
                 cur.execute(
                     f"SELECT question_number FROM {schema}.checklist_answers "
-                    f"WHERE diagnostic_id = {diagnostic_id} "
-                    f"ORDER BY question_number DESC LIMIT 1"
+                    f"WHERE diagnostic_id = %s "
+                    f"ORDER BY question_number DESC LIMIT 1",
+                    (diagnostic_id,)
                 )
                 last_answer = cur.fetchone()
                 
@@ -425,9 +446,10 @@ def handle_callback(update: dict):
                     # Удаляем этот ответ
                     cur.execute(
                         f"DELETE FROM {schema}.checklist_answers "
-                        f"WHERE diagnostic_id = {diagnostic_id} AND question_number = {prev_question_number}"
+                        f"WHERE diagnostic_id = %s AND question_number = %s",
+                        (diagnostic_id, prev_question_number)
                     )
-                    conn.commit()
+                    prev_conn.commit()
                     
                     # Находим индекс этого вопроса
                     questions = get_checklist_questions()
@@ -443,9 +465,11 @@ def handle_callback(update: dict):
                     send_checklist_question(sender_id, session)
                 
                 cur.close()
-                conn.close()
             except Exception as e:
                 print(f"[ERROR] Failed to go back: {str(e)}")
+            finally:
+                if prev_conn:
+                    db_pool.putconn(prev_conn)
         else:
             # Если нет diagnostic_id - просто вернуться назад
             question_index = session.get('question_index', 0)
@@ -457,6 +481,7 @@ def handle_callback(update: dict):
 
 def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
     '''Обработка авторизации по номеру телефона'''
+    conn = None
     try:
         # Извлекаем номер телефона из attachment
         contact_payload = contact_attachment.get('payload', {})
@@ -488,18 +513,17 @@ def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
             clean_phone = '+' + clean_phone
         
         # Ищем механика по номеру телефона
-        db_url = os.environ.get('DATABASE_URL')
         schema = os.environ.get('MAIN_DB_SCHEMA')
-        conn = psycopg2.connect(db_url)
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
         cur = conn.cursor()
         
         cur.execute(
-            f"SELECT id, name, is_active FROM {schema}.mechanics WHERE phone = '{clean_phone}'"
+            f"SELECT id, name, is_active FROM {schema}.mechanics WHERE phone = %s",
+            (clean_phone,)
         )
         mechanic = cur.fetchone()
-        
         cur.close()
-        conn.close()
         
         if not mechanic:
             response_text = f'❌ Номер {phone} не зарегистрирован в системе.\n\nОбратитесь к администратору для получения доступа.'
@@ -532,15 +556,18 @@ def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
         response_text = '⚠️ Ошибка авторизации. Попробуйте ещё раз или обратитесь к администратору.'
         buttons = [[{'type': 'request_contact', 'text': '📱 Отправить номер телефона'}]]
         send_message(sender_id, response_text, buttons)
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
 
 
 def save_diagnostic(session: dict) -> int:
     '''Сохранение диагностики в PostgreSQL'''
+    conn = None
     try:
-        db_url = os.environ.get('DATABASE_URL')
         schema = os.environ.get('MAIN_DB_SCHEMA')
-        
-        conn = psycopg2.connect(db_url)
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
         cur = conn.cursor()
         
         mechanic = session.get('mechanic', '')
@@ -565,14 +592,15 @@ def save_diagnostic(session: dict) -> int:
         
         result = cur.fetchone()
         conn.commit()
-        
         cur.close()
-        conn.close()
         
         return result[0] if result else None
-    
     except Exception as e:
+        print(f"[ERROR] Failed to save diagnostic: {str(e)}")
         return None
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
 
 
 def get_checklist_questions():
@@ -904,7 +932,7 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list):
         
         # Скачиваем фото
         print(f"[DEBUG] Downloading photo from: {photo_url}")
-        photo_response = requests.get(photo_url, timeout=10)
+        photo_response = requests.get(photo_url, timeout=15)
         
         if photo_response.status_code != 200:
             response_text = '⚠️ Не удалось загрузить фото. Попробуйте ещё раз.'
@@ -936,18 +964,20 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list):
         cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
         
         # Сохраняем фото в базу данных
-        db_url = os.environ.get('DATABASE_URL')
         schema = os.environ.get('MAIN_DB_SCHEMA')
-        conn = psycopg2.connect(db_url)
-        cur = conn.cursor()
-        
-        cur.execute(
-            f"INSERT INTO {schema}.diagnostic_photos (diagnostic_id, question_index, photo_url) "
-            f"VALUES ({diagnostic_id}, {question_index}, '{cdn_url}')"
-        )
-        conn.commit()
-        cur.close()
-        conn.close()
+        db_pool = get_db_pool()
+        photo_conn = db_pool.getconn()
+        try:
+            cur = photo_conn.cursor()
+            cur.execute(
+                f"INSERT INTO {schema}.diagnostic_photos (diagnostic_id, question_index, photo_url) "
+                f"VALUES (%s, %s, %s)",
+                (diagnostic_id, question_index, cdn_url)
+            )
+            photo_conn.commit()
+            cur.close()
+        finally:
+            db_pool.putconn(photo_conn)
         
         session['waiting_for_photo'] = False
         
@@ -1118,11 +1148,11 @@ def save_checklist_answer(diagnostic_id: int, question_number: int, answer_value
 
 def save_checklist_answer_with_subs(diagnostic_id: int, question_number: int, answer_value: str, sub_answers: dict) -> bool:
     '''Сохранение ответа на вопрос чек-листа в БД с подпунктами'''
+    conn = None
     try:
-        db_url = os.environ.get('DATABASE_URL')
         schema = os.environ.get('MAIN_DB_SCHEMA')
-        
-        conn = psycopg2.connect(db_url)
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
         cur = conn.cursor()
         
         questions = get_checklist_questions()
@@ -1158,55 +1188,58 @@ def save_checklist_answer_with_subs(diagnostic_id: int, question_number: int, an
         
         # Формируем SQL с sub_answers
         if sub_answers:
-            sub_answers_json = json.dumps(sub_answers, ensure_ascii=False).replace("'", "''")
+            sub_answers_json = json.dumps(sub_answers, ensure_ascii=False)
             cur.execute(
                 f"INSERT INTO {schema}.checklist_answers (diagnostic_id, question_number, question_text, answer_type, answer_value, sub_answers) "
-                f"VALUES ({diagnostic_id}, {question_number}, '{question_text}', 'single', '{answer_val}', '{sub_answers_json}'::jsonb)"
+                f"VALUES (%s, %s, %s, 'single', %s, %s::jsonb)",
+                (diagnostic_id, question_number, question_text, answer_val, sub_answers_json)
             )
         else:
             cur.execute(
                 f"INSERT INTO {schema}.checklist_answers (diagnostic_id, question_number, question_text, answer_type, answer_value) "
-                f"VALUES ({diagnostic_id}, {question_number}, '{question_text}', 'single', '{answer_val}')"
+                f"VALUES (%s, %s, %s, 'single', %s)",
+                (diagnostic_id, question_number, question_text, answer_val)
             )
         
         conn.commit()
         cur.close()
-        conn.close()
         
         print(f"[SUCCESS] Saved answer for question {question_number}")
         return True
-    
     except Exception as e:
         print(f"[ERROR] Failed to save checklist answer: {str(e)}")
         import traceback
         print(f"[ERROR] Traceback: {traceback.format_exc()}")
         return False
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
 
 
 def finish_checklist(sender_id: str, session: dict):
     '''Завершение чек-листа и генерация отчета'''
     diagnostic_id = session.get('diagnostic_id')
-    
     report_url_base = "https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6"
     
+    conn = None
     try:
         # Проверяем наличие фото в БД
-        db_url = os.environ.get('DATABASE_URL')
         schema = os.environ.get('MAIN_DB_SCHEMA')
-        conn = psycopg2.connect(db_url)
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
         cur = conn.cursor()
         
         cur.execute(
-            f"SELECT COUNT(*) FROM {schema}.diagnostic_photos WHERE diagnostic_id = {diagnostic_id}"
+            f"SELECT COUNT(*) FROM {schema}.diagnostic_photos WHERE diagnostic_id = %s",
+            (diagnostic_id,)
         )
         photo_count = cur.fetchone()[0]
         cur.close()
-        conn.close()
         
         has_photos = photo_count > 0
         
         # Генерируем отчёт без фото (всегда)
-        response_no_photos = requests.get(f"{report_url_base}?id={diagnostic_id}", timeout=30)
+        response_no_photos = requests.get(f"{report_url_base}?id={diagnostic_id}", timeout=45)
         pdf_url_no_photos = None
         if response_no_photos.status_code == 200:
             result = response_no_photos.json()
@@ -1215,7 +1248,7 @@ def finish_checklist(sender_id: str, session: dict):
         # Генерируем отчёт с фото только если есть фото
         pdf_url_with_photos = None
         if has_photos:
-            response_with_photos = requests.get(f"{report_url_base}?id={diagnostic_id}&with_photos=true", timeout=30)
+            response_with_photos = requests.get(f"{report_url_base}?id={diagnostic_id}&with_photos=true", timeout=45)
             if response_with_photos.status_code == 200:
                 result = response_with_photos.json()
                 pdf_url_with_photos = result.get('pdfUrl')
@@ -1261,6 +1294,9 @@ def finish_checklist(sender_id: str, session: dict):
         response_text = f'''✅ Диагностика №{diagnostic_id} завершена!
 
 📋 Чек-лист сохранен.'''
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
     
     buttons = [[{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]]
     send_message(sender_id, response_text, buttons)
@@ -1295,7 +1331,7 @@ def send_message(user_id: int, text: str, buttons: list = None):
     print(f"[DEBUG] URL: {url}")
     print(f"[DEBUG] Payload: {json.dumps(payload, ensure_ascii=False)}")
     
-    response = requests.post(url, json=payload, headers=headers)
+    response = requests.post(url, json=payload, headers=headers, timeout=10)
     
     print(f"[DEBUG] Response status: {response.status_code}")
     print(f"[DEBUG] Response body: {response.text}")

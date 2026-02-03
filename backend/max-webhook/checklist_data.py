@@ -3,9 +3,17 @@
 Полностью синхронизировано с src/data/checklistData.ts
 """
 
+# Кэш для оптимизации производительности
+_CHECKLIST_CACHE = None
+
 def get_checklist_questions_full():
-    """Возвращает полную структуру вопросов с subOptions"""
-    return [
+    """Возвращает полную структуру вопросов с subOptions (с кэшированием)"""
+    global _CHECKLIST_CACHE
+    
+    if _CHECKLIST_CACHE is not None:
+        return _CHECKLIST_CACHE
+    
+    _CHECKLIST_CACHE = [
         {
             'id': 1,
             'title': 'Сигнал звукового тона',
@@ -876,3 +884,5 @@ def get_checklist_questions_full():
             ],
         },
     ]
+    
+    return _CHECKLIST_CACHE
