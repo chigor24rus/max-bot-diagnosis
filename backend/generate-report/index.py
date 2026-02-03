@@ -128,7 +128,7 @@ def handler(event: dict, context) -> dict:
             'rear-right': 'Задняя правая',
             'srs': 'SRS',
             'abs': 'ABS',
-            'ake': 'AKE',
+            'akb': 'АКБ',
             'check_engine': 'Check Engine',
             'hybrid': 'Hybrid System / IMA',
             'engine': 'Двигатель',
