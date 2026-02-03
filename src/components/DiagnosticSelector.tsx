@@ -3,12 +3,11 @@ import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 
 interface DiagnosticSelectorProps {
-  mechanicName: string;
   onSelectType: (type: 'dhch' | '5min' | 'des') => void;
   onCancel: () => void;
 }
 
-const DiagnosticSelector = ({ mechanicName, onSelectType, onCancel }: DiagnosticSelectorProps) => {
+const DiagnosticSelector = ({ onSelectType, onCancel }: DiagnosticSelectorProps) => {
   return (
     <Card className="bg-slate-950/90 border-primary/20">
       <CardHeader>
@@ -16,7 +15,7 @@ const DiagnosticSelector = ({ mechanicName, onSelectType, onCancel }: Diagnostic
           <Icon name="ClipboardList" size={24} className="text-primary" />
           Выбор типа диагностики
         </CardTitle>
-        <CardDescription>Механик: {mechanicName}</CardDescription>
+        <CardDescription>Выберите тип диагностики для проведения</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <Button

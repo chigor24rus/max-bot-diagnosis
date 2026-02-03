@@ -171,14 +171,12 @@ const Index = () => {
             )}
             {diagnosticView === 'selector' && (
               <DiagnosticSelector
-                mechanicName={mechanic.name}
                 onSelectType={handleDiagnosticTypeSelect}
                 onCancel={handleDiagnosticCancel}
               />
             )}
             {diagnosticView === 'dhch' && (
               <DiagnosticDHCH
-                mechanicName={mechanic.name}
                 onComplete={handleDiagnosticComplete}
                 onCancel={handleDiagnosticCancel}
               />
