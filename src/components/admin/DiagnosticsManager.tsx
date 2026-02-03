@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,7 +15,6 @@ interface DiagnosticsManagerProps {
 const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [filteredDiagnostics, setFilteredDiagnostics] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMechanic, setFilterMechanic] = useState('all');
   const [filterType, setFilterType] = useState('all');
@@ -24,15 +23,17 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
   const [deleteMode, setDeleteMode] = useState(false);
   const [deleteDateFrom, setDeleteDateFrom] = useState('');
   const [deleteDateTo, setDeleteDateTo] = useState('');
-  const [showAll, setShowAll] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
 
-  useEffect(() => {
+  const filteredDiagnostics = useMemo(() => {
     let filtered = [...diagnostics];
 
     if (searchQuery) {
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(d => 
-        d.carNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.mechanic.toLowerCase().includes(searchQuery.toLowerCase())
+        d.carNumber.toLowerCase().includes(query) ||
+        d.mechanic.toLowerCase().includes(query)
       );
     }
 
@@ -45,7 +46,8 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
     }
 
     if (dateFrom) {
-      filtered = filtered.filter(d => new Date(d.createdAt) >= new Date(dateFrom));
+      const startDate = new Date(dateFrom);
+      filtered = filtered.filter(d => new Date(d.createdAt) >= startDate);
     }
 
     if (dateTo) {
@@ -54,8 +56,20 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
       filtered = filtered.filter(d => new Date(d.createdAt) <= endDate);
     }
 
-    setFilteredDiagnostics(filtered);
+    return filtered;
   }, [diagnostics, searchQuery, filterMechanic, filterType, dateFrom, dateTo]);
+
+  const paginatedDiagnostics = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredDiagnostics.slice(startIndex, endIndex);
+  }, [filteredDiagnostics, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredDiagnostics.length / itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterMechanic, filterType, dateFrom, dateTo]);
 
   const deleteDiagnostic = async (id: number) => {
     try {
@@ -141,6 +155,13 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
     setFilterType('all');
     setDateFrom('');
     setDateTo('');
+    setCurrentPage(1);
+  };
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   return (
@@ -152,8 +173,20 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
               <Icon name="ClipboardList" size={20} className="text-primary" />
               Диагностики
               <Badge variant="outline" className="ml-2">{filteredDiagnostics.length}</Badge>
+              {diagnostics.length > 1000 && (
+                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
+                  Оптимизировано
+                </Badge>
+              )}
             </CardTitle>
-            <CardDescription>История сохранённых диагностик</CardDescription>
+            <CardDescription>
+              История сохранённых диагностик
+              {diagnostics.length !== filteredDiagnostics.length && (
+                <span className="text-primary ml-2">
+                  (отфильтровано из {diagnostics.length})
+                </span>
+              )}
+            </CardDescription>
           </div>
           <Button
             size="sm"
@@ -284,7 +317,23 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
                 </div>
               ) : (
                 <>
-                  {(showAll ? filteredDiagnostics : filteredDiagnostics.slice(0, 5)).map((diagnostic) => (
+                  <div className="flex items-center justify-between text-sm text-slate-400 mb-2">
+                    <div>
+                      Показано {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredDiagnostics.length)} из {filteredDiagnostics.length}
+                    </div>
+                    <Select value={itemsPerPage.toString()} onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
+                      <SelectTrigger className="w-32 h-8 bg-slate-900 border-slate-700">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="25">25 на странице</SelectItem>
+                        <SelectItem value="50">50 на странице</SelectItem>
+                        <SelectItem value="100">100 на странице</SelectItem>
+                        <SelectItem value="200">200 на странице</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {paginatedDiagnostics.map((diagnostic) => (
                     <div key={diagnostic.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 space-y-2">
@@ -312,16 +361,58 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
                       </div>
                     </div>
                   ))}
-                  
-                  {filteredDiagnostics.length > 5 && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowAll(!showAll)}
-                      className="w-full"
-                    >
-                      <Icon name={showAll ? "ChevronUp" : "ChevronDown"} size={16} className="mr-2" />
-                      {showAll ? "Скрыть" : `Показать ещё ${filteredDiagnostics.length - 5}`}
-                    </Button>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-slate-700">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => goToPage(1)}
+                        disabled={currentPage === 1}
+                      >
+                        <Icon name="ChevronsLeft" size={16} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                      >
+                        <Icon name="ChevronLeft" size={16} />
+                      </Button>
+                      <div className="flex items-center gap-2 text-sm text-slate-300">
+                        <span>Страница</span>
+                        <Input
+                          type="number"
+                          min="1"
+                          max={totalPages}
+                          value={currentPage}
+                          onChange={(e) => {
+                            const page = parseInt(e.target.value);
+                            if (page >= 1 && page <= totalPages) {
+                              setCurrentPage(page);
+                            }
+                          }}
+                          className="w-16 h-8 text-center bg-slate-900 border-slate-700"
+                        />
+                        <span>из {totalPages}</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                      >
+                        <Icon name="ChevronRight" size={16} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => goToPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                      >
+                        <Icon name="ChevronsRight" size={16} />
+                      </Button>
+                    </div>
                   )}
                 </>
               )}
