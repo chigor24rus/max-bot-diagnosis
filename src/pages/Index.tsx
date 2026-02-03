@@ -9,10 +9,14 @@ import ChatMessage from '@/components/ChatMessage';
 import ChatInput from '@/components/ChatInput';
 import ChecklistWizard from '@/components/ChecklistWizard';
 import MechanicAuth from '@/components/MechanicAuth';
+import DiagnosticSelector from '@/components/DiagnosticSelector';
+import DiagnosticDHCH from '@/components/DiagnosticDHCH';
 import { useChatLogic } from '@/hooks/useChatLogic';
+import { DiagnosticData } from '@/types/diagnostic';
 
 const Index = () => {
   const [mechanic, setMechanic] = useState<{ id: number; name: string } | null>(null);
+  const [diagnosticView, setDiagnosticView] = useState<'selector' | 'dhch' | null>(null);
 
   useEffect(() => {
     // Проверяем сохранённые данные авторизации
@@ -32,6 +36,28 @@ const Index = () => {
     localStorage.removeItem('mechanic_id');
     localStorage.removeItem('mechanic_name');
     setMechanic(null);
+  };
+
+  const handleStartDiagnostic = () => {
+    setDiagnosticView('selector');
+    setActiveTab('diagnostic');
+  };
+
+  const handleDiagnosticTypeSelect = (type: 'dhch' | '5min' | 'des') => {
+    if (type === 'dhch') {
+      setDiagnosticView('dhch');
+    }
+  };
+
+  const handleDiagnosticComplete = async (data: DiagnosticData) => {
+    console.log('Diagnostic completed:', data);
+    // TODO: Сохранение в БД
+    setDiagnosticView(null);
+    setActiveTab('history');
+  };
+
+  const handleDiagnosticCancel = () => {
+    setDiagnosticView(null);
   };
 
   const {
@@ -86,6 +112,10 @@ const Index = () => {
               <Icon name="MessageSquare" size={16} />
               Чат
             </TabsTrigger>
+            <TabsTrigger value="diagnostic" className="flex items-center gap-2">
+              <Icon name="Wrench" size={16} />
+              Диагностика
+            </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <Icon name="History" size={16} />
               История
@@ -127,6 +157,31 @@ const Index = () => {
                   onCommand={handleCommand}
                 />
               </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="diagnostic" className="flex-1 overflow-y-auto p-4 m-0">
+            {diagnosticView === null && (
+              <div className="flex items-center justify-center h-full">
+                <Button onClick={handleStartDiagnostic} size="lg" className="flex items-center gap-2">
+                  <Icon name="Play" size={20} />
+                  Начать новую диагностику
+                </Button>
+              </div>
+            )}
+            {diagnosticView === 'selector' && (
+              <DiagnosticSelector
+                mechanicName={mechanic.name}
+                onSelectType={handleDiagnosticTypeSelect}
+                onCancel={handleDiagnosticCancel}
+              />
+            )}
+            {diagnosticView === 'dhch' && (
+              <DiagnosticDHCH
+                mechanicName={mechanic.name}
+                onComplete={handleDiagnosticComplete}
+                onCancel={handleDiagnosticCancel}
+              />
             )}
           </TabsContent>
 
