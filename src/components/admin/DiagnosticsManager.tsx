@@ -24,6 +24,7 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
   const [deleteMode, setDeleteMode] = useState(false);
   const [deleteDateFrom, setDeleteDateFrom] = useState('');
   const [deleteDateTo, setDeleteDateTo] = useState('');
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     let filtered = [...diagnostics];
@@ -282,34 +283,47 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
                   <p>Ничего не найдено</p>
                 </div>
               ) : (
-                filteredDiagnostics.map((diagnostic) => (
-                  <div key={diagnostic.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                            {diagnostic.diagnosticType}
-                          </Badge>
-                          <span className="text-xs text-slate-500">
-                            {new Date(diagnostic.createdAt).toLocaleString('ru-RU')}
-                          </span>
+                <>
+                  {(showAll ? filteredDiagnostics : filteredDiagnostics.slice(0, 5)).map((diagnostic) => (
+                    <div key={diagnostic.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                              {diagnostic.diagnosticType}
+                            </Badge>
+                            <span className="text-xs text-slate-500">
+                              {new Date(diagnostic.createdAt).toLocaleString('ru-RU')}
+                            </span>
+                          </div>
+                          <div className="text-sm text-slate-300">
+                            <div>Механик: <span className="text-white font-medium">{diagnostic.mechanic}</span></div>
+                            <div>Автомобиль: <span className="text-white font-medium">{diagnostic.carNumber}</span></div>
+                            <div>Пробег: <span className="text-white font-medium">{diagnostic.mileage.toLocaleString()} км</span></div>
+                          </div>
                         </div>
-                        <div className="text-sm text-slate-300">
-                          <div>Механик: <span className="text-white font-medium">{diagnostic.mechanic}</span></div>
-                          <div>Автомобиль: <span className="text-white font-medium">{diagnostic.carNumber}</span></div>
-                          <div>Пробег: <span className="text-white font-medium">{diagnostic.mileage.toLocaleString()} км</span></div>
-                        </div>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => deleteDiagnostic(diagnostic.id)}
+                        >
+                          <Icon name="Trash2" size={16} />
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => deleteDiagnostic(diagnostic.id)}
-                      >
-                        <Icon name="Trash2" size={16} />
-                      </Button>
                     </div>
-                  </div>
-                ))
+                  ))}
+                  
+                  {filteredDiagnostics.length > 5 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAll(!showAll)}
+                      className="w-full"
+                    >
+                      <Icon name={showAll ? "ChevronUp" : "ChevronDown"} size={16} className="mr-2" />
+                      {showAll ? "Скрыть" : `Показать ещё ${filteredDiagnostics.length - 5}`}
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </>
