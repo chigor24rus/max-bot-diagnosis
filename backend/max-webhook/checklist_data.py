@@ -511,13 +511,15 @@ def get_checklist_questions_full():
         },
         {
             'id': 28,
-            'title': 'Тормозная жидкость / жидкость сцепления',
+            'title': 'Уровень жидкости ГУР',
             'options': [
+                {'value': 'below', 'label': 'Ниже уровня'},
                 {'value': '0-25', 'label': '0-25%'},
                 {'value': '25-50', 'label': '25-50%'},
                 {'value': '50-75', 'label': '50-75%'},
                 {'value': '75-100', 'label': '75-100%'},
                 {'value': 'above', 'label': 'Выше уровня'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
