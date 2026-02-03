@@ -6,26 +6,104 @@ export const dhchSections: Section[] = [
     title: 'Общий раздел',
     questions: [
       {
-        id: 'general_placeholder_1',
-        text: 'Вопрос 1 (общий раздел) - ожидается данные от пользователя',
+        id: 'engine_oil_level',
+        text: 'Уровень масла ДВС',
         type: 'choice',
-        options: ['Исправно', 'Неисправно']
+        options: [
+          'Ниже уровня',
+          '0-25%',
+          '25-50%',
+          '50-75%',
+          '75-100%',
+          'Выше уровня',
+          'Не предусмотренно',
+          'Иное (указать текстом)'
+        ],
+        allowText: true,
+        allowPhoto: true
       },
       {
-        id: 'general_placeholder_2',
-        text: 'Вопрос 2 (общий раздел) - ожидается данные от пользователя',
+        id: 'power_steering_fluid_level',
+        text: 'Уровень жидкости ГУР',
         type: 'choice',
-        options: ['Исправно', 'Неисправно']
+        options: [
+          'Ниже уровня',
+          '0-25%',
+          '25-50%',
+          '50-75%',
+          '75-100%',
+          'Выше уровня',
+          'Не предусмотренно',
+          'Иное (указать текстом)'
+        ],
+        allowText: true,
+        allowPhoto: true
+      },
+      {
+        id: 'coolant_engine_level',
+        text: 'Уровень охлаждающей жидкости ДВС',
+        type: 'choice',
+        options: [
+          'Ниже уровня',
+          'Уровень',
+          'Выше уровня',
+          'Не предусмотренно',
+          'Иное (указать текстом)'
+        ],
+        allowText: true,
+        allowPhoto: true
+      },
+      {
+        id: 'coolant_hv_level',
+        text: 'Уровень охлаждающей жидкости HV',
+        type: 'choice',
+        options: [
+          'Ниже уровня',
+          'Уровень',
+          'Выше уровня',
+          'Не предусмотренно',
+          'Иное (указать текстом)'
+        ],
+        allowText: true,
+        allowPhoto: true
+      },
+      {
+        id: 'coolant_turbo_level',
+        text: 'Уровень охлаждающей жидкости турбины',
+        type: 'choice',
+        options: [
+          'Ниже уровня',
+          'Уровень',
+          'Выше уровня',
+          'Не предусмотренно',
+          'Иное (указать текстом)'
+        ],
+        allowText: true,
+        allowPhoto: true
+      },
+      {
+        id: 'brake_fluid_level',
+        text: 'Уровень тормозной жидкости',
+        type: 'choice',
+        options: [
+          'Ниже уровня',
+          'Уровень',
+          'Выше уровня',
+          'Иное (указать текстом)'
+        ],
+        allowText: true,
+        allowPhoto: true
       },
       {
         id: 'drive_type',
-        text: 'Тип привода автомобиля',
+        text: 'Укажите привод автомобиля',
         type: 'choice',
         options: [
-          'Переднеприводный',
-          'Заднеприводный', 
-          'Полноприводный'
-        ]
+          'Передний',
+          'Задний',
+          'Полный'
+        ],
+        allowPhoto: false
       }
     ]
   },
@@ -42,7 +120,7 @@ export const dhchSections: Section[] = [
     ],
     conditional: {
       dependsOn: 'drive_type',
-      value: 'Переднеприводный'
+      value: 'Передний'
     }
   },
   {
@@ -58,7 +136,7 @@ export const dhchSections: Section[] = [
     ],
     conditional: {
       dependsOn: 'drive_type',
-      value: 'Заднеприводный'
+      value: 'Задний'
     }
   },
   {
@@ -74,7 +152,7 @@ export const dhchSections: Section[] = [
     ],
     conditional: {
       dependsOn: 'drive_type',
-      value: 'Полноприводный'
+      value: 'Полный'
     }
   }
 ];

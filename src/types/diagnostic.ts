@@ -5,6 +5,8 @@ export interface Question {
   text: string;
   type: 'choice' | 'multiselect' | 'text' | 'photo';
   options?: string[];
+  allowText?: boolean;
+  allowPhoto?: boolean;
   conditional?: {
     dependsOn: string;
     value: string | string[];
@@ -24,6 +26,7 @@ export interface Section {
 export interface DiagnosticAnswer {
   questionId: string;
   value: string | string[] | null;
+  textComment?: string;
   photos?: string[];
 }
 

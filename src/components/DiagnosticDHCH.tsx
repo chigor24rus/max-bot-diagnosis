@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { dhchSections } from '@/data/dhch-checklist';
@@ -103,11 +104,28 @@ const DiagnosticDHCH = ({ onComplete, onCancel }: DiagnosticDHCHProps) => {
       const existing = prev.findIndex(a => a.questionId === questionId);
       if (existing >= 0) {
         const updated = [...prev];
-        updated[existing] = { questionId, value };
+        updated[existing] = { ...updated[existing], questionId, value };
         return updated;
       }
       return [...prev, { questionId, value, photos: [] }];
     });
+  };
+
+  const handleTextComment = (questionId: string, textComment: string) => {
+    setAnswers(prev => {
+      const existing = prev.findIndex(a => a.questionId === questionId);
+      if (existing >= 0) {
+        const updated = [...prev];
+        updated[existing] = { ...updated[existing], textComment };
+        return updated;
+      }
+      return prev;
+    });
+  };
+
+  const getTextComment = (questionId: string): string => {
+    const answer = answers.find(a => a.questionId === questionId);
+    return answer?.textComment || '';
   };
 
   const getCurrentAnswer = (questionId: string): string | null => {
@@ -119,7 +137,14 @@ const DiagnosticDHCH = ({ onComplete, onCancel }: DiagnosticDHCHProps) => {
     if (!currentSection) return false;
     return currentSection.questions.every(q => {
       const answer = getCurrentAnswer(q.id);
-      return answer !== null && answer !== '';
+      if (!answer) return false;
+      
+      if (q.allowText && answer === 'Иное (указать текстом)') {
+        const textComment = getTextComment(q.id);
+        return textComment.trim() !== '';
+      }
+      
+      return true;
     });
   };
 
@@ -286,31 +311,63 @@ const DiagnosticDHCH = ({ onComplete, onCancel }: DiagnosticDHCHProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {currentSection?.questions.map((question) => (
-          <div key={question.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-            <Label className="text-slate-100 mb-3 block">{question.text}</Label>
-            {question.type === 'choice' && question.options && (
-              <RadioGroup 
-                value={getCurrentAnswer(question.id) || ''} 
-                onValueChange={(value) => handleAnswer(question.id, value)}
-              >
-                <div className="space-y-2">
-                  {question.options.map((option) => (
-                    <div key={option} className="flex items-center space-x-2">
-                      <RadioGroupItem value={option} id={`${question.id}-${option}`} />
-                      <Label 
-                        htmlFor={`${question.id}-${option}`}
-                        className="text-slate-300 cursor-pointer"
-                      >
-                        {option}
-                      </Label>
-                    </div>
-                  ))}
+        {currentSection?.questions.map((question) => {
+          const currentAnswer = getCurrentAnswer(question.id);
+          const showTextInput = question.allowText && currentAnswer === 'Иное (указать текстом)';
+          
+          return (
+            <div key={question.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 space-y-3">
+              <Label className="text-slate-100 block">{question.text}</Label>
+              {question.type === 'choice' && question.options && (
+                <RadioGroup 
+                  value={currentAnswer || ''} 
+                  onValueChange={(value) => handleAnswer(question.id, value)}
+                >
+                  <div className="space-y-2">
+                    {question.options.map((option) => (
+                      <div key={option} className="flex items-center space-x-2">
+                        <RadioGroupItem value={option} id={`${question.id}-${option}`} />
+                        <Label 
+                          htmlFor={`${question.id}-${option}`}
+                          className="text-slate-300 cursor-pointer"
+                        >
+                          {option}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </RadioGroup>
+              )}
+              
+              {showTextInput && (
+                <div className="pt-2">
+                  <Label className="text-slate-400 text-sm">Укажите подробнее:</Label>
+                  <Textarea
+                    value={getTextComment(question.id)}
+                    onChange={(e) => handleTextComment(question.id, e.target.value)}
+                    placeholder="Введите текст..."
+                    className="bg-slate-800 border-slate-600 mt-1"
+                    rows={3}
+                  />
                 </div>
-              </RadioGroup>
-            )}
-          </div>
-        ))}
+              )}
+              
+              {question.allowPhoto && currentAnswer && (
+                <div className="pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={() => toast({ title: 'Функция в разработке', description: 'Загрузка фото будет доступна позже' })}
+                  >
+                    <Icon name="Camera" size={16} />
+                    Прикрепить фото (опционально)
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         <div className="flex gap-3 pt-4">
           <Button variant="outline" onClick={handleBack}>
