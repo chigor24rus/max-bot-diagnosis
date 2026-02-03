@@ -6,13 +6,23 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface DiagnosticsManagerProps {
   diagnostics: any[];
   onReload: () => void;
+  loading?: boolean;
+  isCached?: boolean;
+  cacheAge?: number;
 }
 
-const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) => {
+const DiagnosticsManager = ({ 
+  diagnostics, 
+  onReload, 
+  loading: externalLoading,
+  isCached,
+  cacheAge
+}: DiagnosticsManagerProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,11 +36,13 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
 
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   const filteredDiagnostics = useMemo(() => {
     let filtered = [...diagnostics];
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase();
       filtered = filtered.filter(d => 
         d.carNumber.toLowerCase().includes(query) ||
         d.mechanic.toLowerCase().includes(query)
@@ -57,7 +69,7 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
     }
 
     return filtered;
-  }, [diagnostics, searchQuery, filterMechanic, filterType, dateFrom, dateTo]);
+  }, [diagnostics, debouncedSearchQuery, filterMechanic, filterType, dateFrom, dateTo]);
 
   const paginatedDiagnostics = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -69,7 +81,7 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, filterMechanic, filterType, dateFrom, dateTo]);
+  }, [debouncedSearchQuery, filterMechanic, filterType, dateFrom, dateTo]);
 
   const deleteDiagnostic = async (id: number) => {
     try {
@@ -172,11 +184,23 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
             <CardTitle className="text-white flex items-center gap-2">
               <Icon name="ClipboardList" size={20} className="text-primary" />
               Диагностики
-              <Badge variant="outline" className="ml-2">{filteredDiagnostics.length}</Badge>
-              {diagnostics.length > 1000 && (
-                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
-                  Оптимизировано
-                </Badge>
+              {externalLoading ? (
+                <Icon name="Loader2" size={16} className="animate-spin text-primary ml-2" />
+              ) : (
+                <>
+                  <Badge variant="outline" className="ml-2">{filteredDiagnostics.length}</Badge>
+                  {diagnostics.length > 1000 && (
+                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
+                      Оптимизировано
+                    </Badge>
+                  )}
+                  {isCached && cacheAge && cacheAge < 300000 && (
+                    <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/30">
+                      <Icon name="Database" size={12} className="mr-1" />
+                      Кеш
+                    </Badge>
+                  )}
+                </>
               )}
             </CardTitle>
             <CardDescription>
@@ -184,6 +208,11 @@ const DiagnosticsManager = ({ diagnostics, onReload }: DiagnosticsManagerProps) 
               {diagnostics.length !== filteredDiagnostics.length && (
                 <span className="text-primary ml-2">
                   (отфильтровано из {diagnostics.length})
+                </span>
+              )}
+              {isCached && cacheAge && (
+                <span className="text-slate-500 ml-2">
+                  • обновлено {Math.floor(cacheAge / 1000)}с назад
                 </span>
               )}
             </CardDescription>
