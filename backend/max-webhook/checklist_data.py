@@ -525,12 +525,13 @@ def get_checklist_questions_full():
         },
         {
             'id': 29,
-            'title': 'Состояние тормозной жидкости / жидкости сцепления',
+            'title': 'Состояние жидкости ГУР',
             'options': [
-                {'value': 'transparent', 'label': 'Прозрачная'},
-                {'value': 'dark', 'label': 'Темная'},
-                {'value': 'mechanical', 'label': 'С механическими примесями'},
+                {'value': 'fresh', 'label': 'Свежее'},
+                {'value': 'working', 'label': 'Рабочее'},
+                {'value': 'particles', 'label': 'С механическими примесями'},
                 {'value': 'water', 'label': 'Примеси воды / антифриза'},
+                {'value': 'burnt', 'label': 'Горелое'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
