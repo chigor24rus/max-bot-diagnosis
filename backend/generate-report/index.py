@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak, Frame, PageTemplate, BaseDocTemplate
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak, Frame, PageTemplate, BaseDocTemplate, NextPageTemplate
 from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -238,10 +238,15 @@ def handler(event: dict, context) -> dict:
         pdfmetrics.registerFont(TTFont('DejaVu', font_path))
         font_name = 'DejaVu'
         
-        background_image_path = '/tmp/hevsr_background.png'
-        if not os.path.exists(background_image_path):
-            background_url = 'https://cdn.poehali.dev/projects/4bb6cea8-8d41-426a-b677-f4304502c188/bucket/e0986711-d405-44d1-a66b-83e4a1ba096d.png'
-            urllib.request.urlretrieve(background_url, background_image_path)
+        first_page_bg_path = '/tmp/hevsr_first_page.png'
+        if not os.path.exists(first_page_bg_path):
+            first_page_url = 'https://cdn.poehali.dev/projects/4bb6cea8-8d41-426a-b677-f4304502c188/bucket/1b9feaf1-b2e2-44e2-9d52-53bb62a5a421.png'
+            urllib.request.urlretrieve(first_page_url, first_page_bg_path)
+        
+        other_pages_bg_path = '/tmp/hevsr_background.png'
+        if not os.path.exists(other_pages_bg_path):
+            other_pages_url = 'https://cdn.poehali.dev/projects/4bb6cea8-8d41-426a-b677-f4304502c188/bucket/e0986711-d405-44d1-a66b-83e4a1ba096d.png'
+            urllib.request.urlretrieve(other_pages_url, other_pages_bg_path)
         
         pdf_buffer = BytesIO()
         
@@ -252,9 +257,25 @@ def handler(event: dict, context) -> dict:
         footer_date = created_at_local.strftime('%d.%m.%Y')
         footer_time = created_at_local.strftime('%H:%M')
         
-        def add_background_and_footer(canvas, doc):
+        def add_first_page_background(canvas, doc):
             canvas.saveState()
-            canvas.drawImage(background_image_path, 0, 0, 
+            canvas.drawImage(first_page_bg_path, 0, 0, 
+                           width=page_width, height=page_height, preserveAspectRatio=False, mask='auto')
+            
+            canvas.setFont(font_name, 8)
+            canvas.setFillColor(colors.HexColor('#666666'))
+            
+            footer_text = f"Отчет по осмотру автомобиля гос.номер: {diagnostic_data['carNumber']}, пробег: {diagnostic_data['mileage']} км, {footer_date}, {footer_time}"
+            canvas.drawString(20*mm, 10*mm, footer_text)
+            
+            page_number = f"Стр. {doc.page}"
+            canvas.drawRightString(page_width - 20*mm, 10*mm, page_number)
+            
+            canvas.restoreState()
+        
+        def add_other_pages_background(canvas, doc):
+            canvas.saveState()
+            canvas.drawImage(other_pages_bg_path, 0, 0, 
                            width=page_width, height=page_height, preserveAspectRatio=False, mask='auto')
             
             canvas.setFont(font_name, 8)
@@ -270,11 +291,14 @@ def handler(event: dict, context) -> dict:
         
         doc = BaseDocTemplate(pdf_buffer, pagesize=A4)
         
-        frame = Frame(20*mm, 15*mm, page_width - 40*mm, page_height - 30*mm, 
-                     id='normal', topPadding=50*mm)
+        first_page_frame = Frame(20*mm, 15*mm, page_width - 40*mm, page_height - 30*mm, 
+                                id='first', topPadding=70*mm)
+        other_pages_frame = Frame(20*mm, 15*mm, page_width - 40*mm, page_height - 30*mm, 
+                                 id='normal', topPadding=50*mm)
         
-        template = PageTemplate(id='background_template', frames=[frame], onPage=add_background_and_footer)
-        doc.addPageTemplates([template])
+        first_template = PageTemplate(id='first_page', frames=[first_page_frame], onPage=add_first_page_background)
+        other_template = PageTemplate(id='other_pages', frames=[other_pages_frame], onPage=add_other_pages_background)
+        doc.addPageTemplates([first_template, other_template])
         
         story = []
         styles = getSampleStyleSheet()
@@ -334,6 +358,8 @@ def handler(event: dict, context) -> dict:
             for item in working_items:
                 story.append(Paragraph(f'• {item}', item_style))
             story.append(Spacer(1, 6*mm))
+        
+        story.append(NextPageTemplate('other_pages'))
         
         if broken_items:
             story.append(Paragraph('Обнаруженные неисправности:', section_style))
