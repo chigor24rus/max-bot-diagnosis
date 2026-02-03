@@ -1,6 +1,6 @@
 """
 Структура вопросов чек-листа с поддержкой подпунктов
-Портировано из src/data/checklistData.ts
+Полностью синхронизировано с src/data/checklistData.ts
 """
 
 def get_checklist_questions_full():
@@ -251,42 +251,34 @@ def get_checklist_questions_full():
         },
         {
             'id': 15,
-            'title': 'Габариты задние',
+            'title': 'Щетка стеклоочистителя заднего',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
                 {
                     'value': 'bad',
                     'label': 'Неисправно',
-                    'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
-                        {'value': 'left', 'label': 'Слева'},
+                        {'value': 'smearing', 'label': 'Мажет'},
+                        {'value': 'damaged', 'label': 'Повреждена'},
+                        {'value': 'missing', 'label': 'Отсутствует'},
                     ],
                 },
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
             'id': 16,
-            'title': 'Стоп-сигналы',
+            'title': 'Рамка заднего госномера',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
-                {
-                    'value': 'bad',
-                    'label': 'Неисправно',
-                    'allowMultiple': True,
-                    'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
-                        {'value': 'center', 'label': 'Центральный'},
-                        {'value': 'left', 'label': 'Слева'},
-                    ],
-                },
+                {'value': 'bad', 'label': 'Неисправно'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
             'id': 17,
-            'title': 'Повороты задние',
+            'title': 'Подсветка заднего госномера',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
                 {
@@ -303,7 +295,7 @@ def get_checklist_questions_full():
         },
         {
             'id': 18,
-            'title': 'Задний противотуманный фонарь',
+            'title': 'Габариты задние',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
                 {
@@ -315,13 +307,12 @@ def get_checklist_questions_full():
                         {'value': 'left', 'label': 'Слева'},
                     ],
                 },
-                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
             'id': 19,
-            'title': 'Фонари заднего хода',
+            'title': 'Повороты задние',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
                 {
@@ -338,7 +329,25 @@ def get_checklist_questions_full():
         },
         {
             'id': 20,
-            'title': 'Подсветка госномера',
+            'title': 'Стоп сигналы задние',
+            'options': [
+                {'value': 'ok', 'label': 'Исправно'},
+                {
+                    'value': 'bad',
+                    'label': 'Неисправно',
+                    'allowMultiple': True,
+                    'subOptions': [
+                        {'value': 'right', 'label': 'Справа'},
+                        {'value': 'center', 'label': 'Центральный'},
+                        {'value': 'left', 'label': 'Слева'},
+                    ],
+                },
+                {'value': 'other', 'label': 'Иное (указать текстом)'},
+            ],
+        },
+        {
+            'id': 21,
+            'title': 'Сигнал заднего хода',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
                 {
@@ -354,16 +363,25 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 21,
-            'title': 'Рамка заднего госномера',
+            'id': 22,
+            'title': 'Задние противотуманные фары',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
-                {'value': 'bad', 'label': 'Неисправно'},
+                {
+                    'value': 'bad',
+                    'label': 'Неисправно',
+                    'allowMultiple': True,
+                    'subOptions': [
+                        {'value': 'right', 'label': 'Справа'},
+                        {'value': 'left', 'label': 'Слева'},
+                    ],
+                },
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 22,
+            'id': 23,
             'title': 'Колесо заднее правое',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -382,7 +400,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 23,
+            'id': 24,
             'title': 'Колесо переднее правое',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -401,28 +419,97 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 24,
-            'title': 'Уровень моторного масла',
-            'options': [
-                {'value': '0-25', 'label': '0-25%'},
-                {'value': '25-50', 'label': '25-50%'},
-                {'value': '50-75', 'label': '50-75%'},
-                {'value': '75-100', 'label': '75-100%'},
-                {'value': 'overfilled', 'label': 'Превышает максимум'},
-                {'value': 'other', 'label': 'Иное (указать текстом)'},
-            ],
-        },
-        {
             'id': 25,
-            'title': 'Состояние моторного масла',
+            'title': 'Состояние приводных ремней',
             'options': [
-                {'value': 'ok', 'label': 'Чистое'},
-                {'value': 'bad', 'label': 'Грязное'},
+                {'value': 'ok', 'label': 'Исправно'},
+                {
+                    'value': 'bad',
+                    'label': 'Неисправно',
+                    'allowMultiple': True,
+                    'subOptions': [
+                        {
+                            'value': 'timing_belt',
+                            'label': 'Ремень ГРМ',
+                            'subOptions': [
+                                {'value': 'cracks', 'label': 'Трещины'},
+                                {'value': 'peeling', 'label': 'Отслоения'},
+                                {'value': 'oil', 'label': 'Попадания масла'},
+                                {'value': 'missing', 'label': 'Отсутствует'},
+                            ],
+                        },
+                        {
+                            'value': 'alternator_belt',
+                            'label': 'Ремень генератора',
+                            'subOptions': [
+                                {'value': 'cracks', 'label': 'Трещины'},
+                                {'value': 'peeling', 'label': 'Отслоения'},
+                                {'value': 'oil', 'label': 'Попадания масла'},
+                                {'value': 'missing', 'label': 'Отсутствует'},
+                            ],
+                        },
+                        {
+                            'value': 'power_steering_belt',
+                            'label': 'Ремень ГУР',
+                            'subOptions': [
+                                {'value': 'cracks', 'label': 'Трещины'},
+                                {'value': 'peeling', 'label': 'Отслоения'},
+                                {'value': 'oil', 'label': 'Попадания масла'},
+                                {'value': 'missing', 'label': 'Отсутствует'},
+                            ],
+                        },
+                        {
+                            'value': 'ac_belt',
+                            'label': 'Ремень кондиционера',
+                            'subOptions': [
+                                {'value': 'cracks', 'label': 'Трещины'},
+                                {'value': 'peeling', 'label': 'Отслоения'},
+                                {'value': 'oil', 'label': 'Попадания масла'},
+                                {'value': 'missing', 'label': 'Отсутствует'},
+                            ],
+                        },
+                        {
+                            'value': 'pump_belt',
+                            'label': 'Ремень помпы',
+                            'subOptions': [
+                                {'value': 'cracks', 'label': 'Трещины'},
+                                {'value': 'peeling', 'label': 'Отслоения'},
+                                {'value': 'oil', 'label': 'Попадания масла'},
+                                {'value': 'missing', 'label': 'Отсутствует'},
+                            ],
+                        },
+                    ],
+                },
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
             'id': 26,
+            'title': 'Уровень масла ДВС',
+            'options': [
+                {'value': 'below', 'label': 'Ниже уровня'},
+                {'value': '0-25', 'label': '0-25%'},
+                {'value': '25-50', 'label': '25-50%'},
+                {'value': '50-75', 'label': '50-75%'},
+                {'value': '75-100', 'label': '75-100%'},
+                {'value': 'above', 'label': 'Выше уровня'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
+                {'value': 'other', 'label': 'Иное (указать текстом)'},
+            ],
+        },
+        {
+            'id': 27,
+            'title': 'Состояние масла ДВС',
+            'options': [
+                {'value': 'ok', 'label': 'Чистое'},
+                {'value': 'bad', 'label': 'Грязное'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
+                {'value': 'other', 'label': 'Иное (указать текстом)'},
+            ],
+        },
+        {
+            'id': 28,
             'title': 'Тормозная жидкость / жидкость сцепления',
             'options': [
                 {'value': '0-25', 'label': '0-25%'},
@@ -434,7 +521,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 27,
+            'id': 29,
             'title': 'Состояние тормозной жидкости / жидкости сцепления',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачная'},
@@ -445,7 +532,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 28,
+            'id': 30,
             'title': 'Омывающая жидкость лобового стекла',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -463,7 +550,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 29,
+            'id': 31,
             'title': 'Цвет антифриза (красный)',
             'options': [
                 {'value': 'red', 'label': 'Красный'},
@@ -471,42 +558,46 @@ def get_checklist_questions_full():
                 {'value': 'brown', 'label': 'Коричневый'},
                 {'value': 'yellow', 'label': 'Желтый'},
                 {'value': 'colorless', 'label': 'Бесцветный'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 30,
+            'id': 32,
             'title': 'Состояние антифриза (красный)',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачный'},
                 {'value': 'rusty', 'label': 'Ржавый'},
                 {'value': 'oily', 'label': 'Маслянистый'},
                 {'value': 'particles', 'label': 'Посторонние частицы'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 31,
+            'id': 33,
             'title': 'Температура замерзания антифриза (красный)',
             'options': [
                 {'value': 'below_minus_25', 'label': 'Менее -25⁰С'},
                 {'value': 'minus_25_to_minus_15', 'label': 'От -25⁰С до -15⁰С'},
                 {'value': 'minus_15_to_minus_5', 'label': 'От -15⁰С до -5⁰С'},
                 {'value': 'minus_5_to_0', 'label': 'От -5⁰С до 0⁰С'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 32,
+            'id': 34,
             'title': 'Уровень антифриза (красный)',
             'options': [
                 {'value': 'ok', 'label': 'В норме'},
                 {'value': 'low', 'label': 'Низкий'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 33,
+            'id': 35,
             'title': 'Цвет антифриза (зеленый)',
             'options': [
                 {'value': 'green', 'label': 'Зеленый'},
@@ -514,42 +605,46 @@ def get_checklist_questions_full():
                 {'value': 'brown', 'label': 'Коричневый'},
                 {'value': 'yellow', 'label': 'Желтый'},
                 {'value': 'colorless', 'label': 'Бесцветный'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 34,
+            'id': 36,
             'title': 'Состояние антифриза (зеленый)',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачный'},
                 {'value': 'rusty', 'label': 'Ржавый'},
                 {'value': 'oily', 'label': 'Маслянистый'},
                 {'value': 'particles', 'label': 'Посторонние частицы'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 35,
+            'id': 37,
             'title': 'Температура замерзания антифриза (зеленый)',
             'options': [
                 {'value': 'below_minus_25', 'label': 'Менее -25⁰С'},
                 {'value': 'minus_25_to_minus_15', 'label': 'От -25⁰С до -15⁰С'},
                 {'value': 'minus_15_to_minus_5', 'label': 'От -15⁰С до -5⁰С'},
                 {'value': 'minus_5_to_0', 'label': 'От -5⁰С до 0⁰С'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 36,
+            'id': 38,
             'title': 'Уровень антифриза (зеленый)',
             'options': [
                 {'value': 'ok', 'label': 'В норме'},
                 {'value': 'low', 'label': 'Низкий'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 37,
+            'id': 39,
             'title': 'Цвет антифриза (синий)',
             'options': [
                 {'value': 'blue', 'label': 'Синий'},
@@ -557,42 +652,46 @@ def get_checklist_questions_full():
                 {'value': 'brown', 'label': 'Коричневый'},
                 {'value': 'yellow', 'label': 'Желтый'},
                 {'value': 'colorless', 'label': 'Бесцветный'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 38,
+            'id': 40,
             'title': 'Состояние антифриза (синий)',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачный'},
                 {'value': 'rusty', 'label': 'Ржавый'},
                 {'value': 'oily', 'label': 'Маслянистый'},
                 {'value': 'particles', 'label': 'Посторонние частицы'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 39,
+            'id': 41,
             'title': 'Температура замерзания антифриза (синий)',
             'options': [
                 {'value': 'below_minus_25', 'label': 'Менее -25⁰С'},
                 {'value': 'minus_25_to_minus_15', 'label': 'От -25⁰С до -15⁰С'},
                 {'value': 'minus_15_to_minus_5', 'label': 'От -15⁰С до -5⁰С'},
                 {'value': 'minus_5_to_0', 'label': 'От -5⁰С до 0⁰С'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 40,
+            'id': 42,
             'title': 'Уровень антифриза (синий)',
             'options': [
                 {'value': 'ok', 'label': 'В норме'},
                 {'value': 'low', 'label': 'Низкий'},
+                {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 41,
+            'id': 43,
             'title': 'Уровень жидкости ГУР',
             'options': [
                 {'value': 'ok', 'label': 'В норме'},
@@ -602,7 +701,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 42,
+            'id': 44,
             'title': 'Состояние жидкости ГУР',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачная'},
@@ -613,7 +712,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 43,
+            'id': 45,
             'title': 'Уровень масла в АКПП / Вариатор',
             'options': [
                 {'value': '0-25', 'label': '0-25%'},
@@ -621,12 +720,13 @@ def get_checklist_questions_full():
                 {'value': '50-75', 'label': '50-75%'},
                 {'value': '75-100', 'label': '75-100%'},
                 {'value': 'above', 'label': 'Выше уровня'},
+                {'value': 'need_disassembly', 'label': 'Требуется разбор'},
                 {'value': 'na', 'label': 'Не предусмотрено'},
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
             ],
         },
         {
-            'id': 44,
+            'id': 46,
             'title': 'Состояние масла в АКПП / Вариатор',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачное'},
@@ -639,7 +739,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 45,
+            'id': 47,
             'title': 'Проверка ДВС на посторонние шумы',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -658,13 +758,14 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 46,
+            'id': 48,
             'title': 'Проверка АКПП / Вариатор',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
                 {
                     'value': 'bad',
                     'label': 'Неисправно',
+                    'allowMultiple': True,
                     'subOptions': [
                         {'value': 'slipping', 'label': 'Пробуксовка'},
                         {'value': 'jerking', 'label': 'Рывки'},
@@ -677,7 +778,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 47,
+            'id': 49,
             'title': 'АКБ',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -696,7 +797,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 48,
+            'id': 50,
             'title': 'Проверка работы кондиционера',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -706,7 +807,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 49,
+            'id': 51,
             'title': 'Проверка работы отопителя',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -715,7 +816,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 50,
+            'id': 52,
             'title': 'Утечки из системы ДВС',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -736,7 +837,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 51,
+            'id': 53,
             'title': 'Утечки из системы выхлопа',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -753,33 +854,6 @@ def get_checklist_questions_full():
                     ],
                 },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
-            ],
-        },
-        {
-            'id': 52,
-            'title': 'Утечки из системы топлива',
-            'options': [
-                {'value': 'ok', 'label': 'Исправно'},
-                {
-                    'value': 'bad',
-                    'label': 'Неисправно',
-                    'allowMultiple': True,
-                    'subOptions': [
-                        {'value': 'fuel_lines', 'label': 'Топливные магистрали'},
-                        {'value': 'fuel_tank', 'label': 'Топливный бак'},
-                        {'value': 'injectors', 'label': 'Форсунки'},
-                        {'value': 'missing', 'label': 'Отсутствует'},
-                    ],
-                },
-                {'value': 'other', 'label': 'Иное (указать текстом)'},
-            ],
-        },
-        {
-            'id': 53,
-            'title': 'Завершить осмотр',
-            'options': [
-                {'value': 'other', 'label': 'Добавить замечания (указать текстом)'},
-                {'value': 'complete', 'label': 'Завершить, замечаний нет'},
             ],
         },
     ]
