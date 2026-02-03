@@ -247,10 +247,25 @@ def handler(event: dict, context) -> dict:
         
         page_width, page_height = A4
         
-        def add_background(canvas, doc):
+        krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
+        created_at_local = diagnostic_data['createdAt'].astimezone(krasnoyarsk_tz)
+        footer_date = created_at_local.strftime('%d.%m.%Y')
+        footer_time = created_at_local.strftime('%H:%M')
+        
+        def add_background_and_footer(canvas, doc):
             canvas.saveState()
             canvas.drawImage(background_image_path, 0, 0, 
                            width=page_width, height=page_height, preserveAspectRatio=False, mask='auto')
+            
+            canvas.setFont(font_name, 8)
+            canvas.setFillColor(colors.HexColor('#666666'))
+            
+            footer_text = f"Отчет по осмотру автомобиля гос.номер: {diagnostic_data['carNumber']}, пробег: {diagnostic_data['mileage']} км, {footer_date}, {footer_time}"
+            canvas.drawString(20*mm, 10*mm, footer_text)
+            
+            page_number = f"Стр. {doc.page}"
+            canvas.drawRightString(page_width - 20*mm, 10*mm, page_number)
+            
             canvas.restoreState()
         
         doc = BaseDocTemplate(pdf_buffer, pagesize=A4)
@@ -258,7 +273,7 @@ def handler(event: dict, context) -> dict:
         frame = Frame(20*mm, 15*mm, page_width - 40*mm, page_height - 30*mm, 
                      id='normal', topPadding=50*mm)
         
-        template = PageTemplate(id='background_template', frames=[frame], onPage=add_background)
+        template = PageTemplate(id='background_template', frames=[frame], onPage=add_background_and_footer)
         doc.addPageTemplates([template])
         
         story = []
@@ -278,9 +293,6 @@ def handler(event: dict, context) -> dict:
         
         story.append(Paragraph('Отчет по осмотру автомобиля', title_style))
         story.append(Spacer(1, 8*mm))
-        
-        krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
-        created_at_local = diagnostic_data['createdAt'].astimezone(krasnoyarsk_tz)
         
         info_style = ParagraphStyle(
             'Info',
