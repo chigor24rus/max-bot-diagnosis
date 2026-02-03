@@ -402,34 +402,6 @@ def get_checklist_questions_full():
         },
         {
             'id': 24,
-            'title': 'Запасное колесо',
-            'options': [
-                {'value': 'ok', 'label': 'Исправно'},
-                {
-                    'value': 'bad',
-                    'label': 'Неисправно',
-                    'allowMultiple': True,
-                    'subOptions': [
-                        {'value': 'bulges_cuts', 'label': 'Грыжи, порезы'},
-                        {'value': 'valve_cracks', 'label': 'Вентиль трещины'},
-                        {'value': 'pressure', 'label': 'Давление вне нормы'},
-                        {'value': 'missing', 'label': 'Отсутствует'},
-                    ],
-                },
-                {'value': 'other', 'label': 'Иное (указать текстом)'},
-            ],
-        },
-        {
-            'id': 25,
-            'title': 'Запасное колесо: домкрат',
-            'options': [
-                {'value': 'ok', 'label': 'Исправно'},
-                {'value': 'bad', 'label': 'Неисправно'},
-                {'value': 'other', 'label': 'Иное (указать текстом)'},
-            ],
-        },
-        {
-            'id': 26,
             'title': 'Уровень моторного масла',
             'options': [
                 {'value': '0-25', 'label': '0-25%'},
@@ -441,7 +413,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 27,
+            'id': 25,
             'title': 'Состояние моторного масла',
             'options': [
                 {'value': 'ok', 'label': 'Чистое'},
@@ -450,7 +422,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 28,
+            'id': 26,
             'title': 'Тормозная жидкость / жидкость сцепления',
             'options': [
                 {'value': '0-25', 'label': '0-25%'},
@@ -462,7 +434,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 29,
+            'id': 27,
             'title': 'Состояние тормозной жидкости / жидкости сцепления',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачная'},
@@ -473,7 +445,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 30,
+            'id': 28,
             'title': 'Омывающая жидкость лобового стекла',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -491,7 +463,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 31,
+            'id': 29,
             'title': 'Цвет антифриза (красный)',
             'options': [
                 {'value': 'red', 'label': 'Красный'},
@@ -503,7 +475,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 32,
+            'id': 30,
             'title': 'Состояние антифриза (красный)',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачный'},
@@ -514,7 +486,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 33,
+            'id': 31,
             'title': 'Температура замерзания антифриза (красный)',
             'options': [
                 {'value': 'below_minus_25', 'label': 'Менее -25⁰С'},
@@ -525,7 +497,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 34,
+            'id': 32,
             'title': 'Уровень антифриза (красный)',
             'options': [
                 {'value': 'ok', 'label': 'В норме'},
@@ -534,7 +506,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 35,
+            'id': 33,
             'title': 'Цвет антифриза (зеленый)',
             'options': [
                 {'value': 'green', 'label': 'Зеленый'},
@@ -546,7 +518,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 36,
+            'id': 34,
             'title': 'Состояние антифриза (зеленый)',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачный'},
@@ -557,7 +529,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 37,
+            'id': 35,
             'title': 'Температура замерзания антифриза (зеленый)',
             'options': [
                 {'value': 'below_minus_25', 'label': 'Менее -25⁰С'},
@@ -568,7 +540,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 38,
+            'id': 36,
             'title': 'Уровень антифриза (зеленый)',
             'options': [
                 {'value': 'ok', 'label': 'В норме'},
@@ -577,7 +549,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 39,
+            'id': 37,
             'title': 'Цвет антифриза (синий)',
             'options': [
                 {'value': 'blue', 'label': 'Синий'},
@@ -589,7 +561,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 40,
+            'id': 38,
             'title': 'Состояние антифриза (синий)',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачный'},
@@ -600,7 +572,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 41,
+            'id': 39,
             'title': 'Температура замерзания антифриза (синий)',
             'options': [
                 {'value': 'below_minus_25', 'label': 'Менее -25⁰С'},
@@ -611,7 +583,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 42,
+            'id': 40,
             'title': 'Уровень антифриза (синий)',
             'options': [
                 {'value': 'ok', 'label': 'В норме'},
@@ -620,7 +592,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 43,
+            'id': 41,
             'title': 'Уровень жидкости ГУР',
             'options': [
                 {'value': 'ok', 'label': 'В норме'},
@@ -630,7 +602,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 44,
+            'id': 42,
             'title': 'Состояние жидкости ГУР',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачная'},
@@ -641,7 +613,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 45,
+            'id': 43,
             'title': 'Уровень масла в АКПП / Вариатор',
             'options': [
                 {'value': '0-25', 'label': '0-25%'},
@@ -654,7 +626,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 46,
+            'id': 44,
             'title': 'Состояние масла в АКПП / Вариатор',
             'options': [
                 {'value': 'transparent', 'label': 'Прозрачное'},
@@ -667,7 +639,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 47,
+            'id': 45,
             'title': 'Проверка ДВС на посторонние шумы',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -686,7 +658,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 48,
+            'id': 46,
             'title': 'Проверка АКПП / Вариатор',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -705,7 +677,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 49,
+            'id': 47,
             'title': 'АКБ',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -724,7 +696,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 50,
+            'id': 48,
             'title': 'Проверка работы кондиционера',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -734,7 +706,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 51,
+            'id': 49,
             'title': 'Проверка работы отопителя',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -743,7 +715,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 52,
+            'id': 50,
             'title': 'Утечки из системы ДВС',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -764,7 +736,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 53,
+            'id': 51,
             'title': 'Утечки из системы выхлопа',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -784,7 +756,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 54,
+            'id': 52,
             'title': 'Утечки из системы топлива',
             'options': [
                 {'value': 'ok', 'label': 'Исправно'},
@@ -803,7 +775,7 @@ def get_checklist_questions_full():
             ],
         },
         {
-            'id': 55,
+            'id': 53,
             'title': 'Завершить осмотр',
             'options': [
                 {'value': 'other', 'label': 'Добавить замечания (указать текстом)'},
