@@ -1358,9 +1358,15 @@ def finish_checklist(sender_id: str, session: dict):
     buttons = [[{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]]
     send_message(sender_id, response_text, buttons)
     
-    # Сброс сессии
-    session = {'step': 0}
-    save_session(str(sender_id), session)
+    session_data = {
+        'step': 0,
+        'mechanic': session.get('mechanic'),
+        'mechanic_id': session.get('mechanic_id'),
+        'user_id': session.get('user_id'),
+        'user_name': session.get('user_name'),
+        'phone': session.get('phone'),
+    }
+    save_session(str(sender_id), session_data)
 
 
 def send_priemka_question(sender_id: str, session: dict):
@@ -1729,6 +1735,9 @@ def finish_priemka(sender_id: str, session: dict):
         'step': 0,
         'mechanic': session.get('mechanic'),
         'mechanic_id': session.get('mechanic_id'),
+        'user_id': session.get('user_id'),
+        'user_name': session.get('user_name'),
+        'phone': session.get('phone'),
     }
     save_session(str(sender_id), session_data)
 
