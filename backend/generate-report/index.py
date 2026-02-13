@@ -357,10 +357,11 @@ def handler(event: dict, context) -> dict:
         is_priemka = diagnostic_data.get('diagnosticType') == 'priemka'
         
         if is_priemka:
+            story.append(NextPageTemplate('other_pages'))
+            story.append(PageBreak())
+            
             story.append(Paragraph('Фотофиксация автомобиля', section_style))
             story.append(Spacer(1, 4*mm))
-            
-            story.append(NextPageTemplate('other_pages'))
             
             priemka_photos_by_q = {}
             cur.execute(
