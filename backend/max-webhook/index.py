@@ -276,9 +276,9 @@ def handle_message(update: dict):
             response_text = f'✅ Пробег {int(mileage_str):,} км принят!\n\nТеперь выберите тип диагностики:'.replace(',', ' ')
             buttons = [
                 [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
-                [{'type': 'callback', 'text': '5-ти минутка', 'payload': 'type:5min'}],
-                [{'type': 'callback', 'text': 'ДХЧ', 'payload': 'type:dhch'}],
-                [{'type': 'callback', 'text': 'ДЭС', 'payload': 'type:des'}]
+                [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
+                [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
+                [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}]
             ]
             send_message(sender_id, response_text, buttons)
         else:
@@ -376,9 +376,9 @@ def handle_callback(update: dict):
         response_text = 'Выберите тип диагностики:'
         buttons = [
             [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
-            [{'type': 'callback', 'text': '5-ти минутка', 'payload': 'type:5min'}],
-            [{'type': 'callback', 'text': 'ДХЧ', 'payload': 'type:dhch'}],
-            [{'type': 'callback', 'text': 'ДЭС', 'payload': 'type:des'}]
+            [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
+            [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
+            [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}]
         ]
         send_message(sender_id, response_text, buttons)
     
