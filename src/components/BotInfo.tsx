@@ -1,8 +1,26 @@
+import { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
+import QRCode from 'qrcode';
 
 const BotInfo = () => {
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
+  const botUrl = 'https://max.ru/id245900919213_bot';
+
+  useEffect(() => {
+    if (qrCanvasRef.current) {
+      QRCode.toCanvas(qrCanvasRef.current, botUrl, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#3B82F6',
+          light: '#0F172A'
+        }
+      });
+    }
+  }, []);
+
   return (
     <div className="p-4 space-y-4">
       <Card className="bg-gradient-to-br from-primary/10 via-slate-900/50 to-accent/10 border-primary/20">
@@ -22,8 +40,25 @@ const BotInfo = () => {
               Умный помощник для проведения диагностики автомобилей в автосервисе.
               Автоматизирует процесс осмотра, сохраняет данные и генерирует отчёты.
             </p>
+            
+            <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+              <p className="text-slate-300 text-sm mb-3">Откройте бота по ссылке:</p>
+              <a 
+                href={botUrl}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 text-sm break-all mb-4 block"
+              >
+                {botUrl}
+              </a>
+              <div className="flex justify-center mb-3">
+                <canvas ref={qrCanvasRef} className="rounded-lg"></canvas>
+              </div>
+              <p className="text-slate-400 text-xs">Отсканируйте QR-код для быстрого доступа</p>
+            </div>
+
             <a 
-              href="https://max.ru/id245900919213_bot" 
+              href={botUrl}
               target="_blank" 
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
