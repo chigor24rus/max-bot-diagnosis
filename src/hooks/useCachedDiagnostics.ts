@@ -75,7 +75,7 @@ export const useCachedDiagnostics = () => {
       }
 
       const response = await fetch(
-        'https://functions.poehali.dev/e76024e1-4735-4e57-bf5f-060276b574c8',
+        'https://functions.poehali.dev/e76024e1-4735-4e57-bf5f-060276b574c8?limit=500',
         {
           signal: abortControllerRef.current.signal,
           headers
@@ -94,11 +94,13 @@ export const useCachedDiagnostics = () => {
       
       setDiagnostics(data);
       saveToCache(data, etag);
-    } catch (err: any) {
+    } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       if (err.name === 'AbortError') {
         return;
       }
-      setError('Не удалось загрузить диагностики');
+      if (!loadFromCache()) {
+        setError('Не удалось загрузить диагностики');
+      }
       console.error('Load error:', err);
     } finally {
       setLoading(false);
