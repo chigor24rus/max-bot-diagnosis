@@ -385,14 +385,12 @@ def handler(event: dict, context) -> dict:
                         try:
                             photo_resp = urllib.request.urlopen(photo_url)
                             photo_data = photo_resp.read()
-                            img_buf = BytesIO(photo_data)
-                            img_reader = ImageReader(img_buf)
+                            img_reader = ImageReader(BytesIO(photo_data))
                             iw, ih = img_reader.getSize()
                             max_w = 130*mm
                             max_h = 180*mm
                             scale = min(max_w / iw, max_h / ih)
-                            img_buf.seek(0)
-                            img = Image(img_buf, width=iw*scale, height=ih*scale)
+                            img = Image(img_reader, width=iw*scale, height=ih*scale)
                             story.append(Spacer(1, 2*mm))
                             story.append(img)
                         except Exception as e:
@@ -419,14 +417,12 @@ def handler(event: dict, context) -> dict:
                             try:
                                 photo_response = urllib.request.urlopen(photo_url)
                                 photo_data = photo_response.read()
-                                img_buf = BytesIO(photo_data)
-                                img_reader = ImageReader(img_buf)
+                                img_reader = ImageReader(BytesIO(photo_data))
                                 iw, ih = img_reader.getSize()
                                 max_w = 120*mm
                                 max_h = 180*mm
                                 scale = min(max_w / iw, max_h / ih)
-                                img_buf.seek(0)
-                                img = Image(img_buf, width=iw*scale, height=ih*scale)
+                                img = Image(img_reader, width=iw*scale, height=ih*scale)
                                 story.append(img)
                                 story.append(Spacer(1, 2*mm))
                             except Exception as e:
