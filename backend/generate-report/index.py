@@ -382,8 +382,8 @@ def handler(event: dict, context) -> dict:
                     block.append(Paragraph(f'  {answer_value}', item_style))
                 
                 q_index = question_num - 1
-                if q_index in priemka_photos_by_q:
-                    for photo_url in priemka_photos_by_q[q_index]:
+                if q_index in priemka_photos_by_q and answer_value not in ('Не предусмотрено', 'Доп. фото нет', 'Замечаний нет'):
+                    for photo_url in priemka_photos_by_q.pop(q_index):
                         try:
                             photo_resp = urllib.request.urlopen(photo_url)
                             photo_data = photo_resp.read()
