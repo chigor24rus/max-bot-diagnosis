@@ -30,6 +30,7 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
   const [carNumber, setCarNumber] = useState('');
   const [mileage, setMileage] = useState('');
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<DiagnosticAnswer[]>([]);
 
   useEffect(() => {
@@ -59,6 +60,7 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
   }, [answers]);
 
   const currentSection = availableSections[currentSectionIndex];
+  const currentQuestion = currentSection?.questions[currentQuestionIndex];
 
   const handleAnswer = (questionId: string, value: string) => {
     setAnswers(prev => {
@@ -90,16 +92,25 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
   };
 
   const handleNext = () => {
-    if (currentSectionIndex < availableSections.length - 1) {
+    const totalQuestions = currentSection?.questions.length || 0;
+    
+    if (currentQuestionIndex < totalQuestions - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+    } else if (currentSectionIndex < availableSections.length - 1) {
       setCurrentSectionIndex(prev => prev + 1);
+      setCurrentQuestionIndex(0);
     } else {
       handleComplete();
     }
   };
 
   const handleBack = () => {
-    if (currentSectionIndex > 0) {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
+    } else if (currentSectionIndex > 0) {
       setCurrentSectionIndex(prev => prev - 1);
+      const prevSection = availableSections[currentSectionIndex - 1];
+      setCurrentQuestionIndex((prevSection?.questions.length || 1) - 1);
     }
   };
 
@@ -122,28 +133,31 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
     return answer?.value as string || null;
   };
 
-  const isCurrentSectionComplete = () => {
-    if (!currentSection) return false;
-    return currentSection.questions.every(q => {
-      const answer = getCurrentAnswer(q.id);
-      
-      if (q.type === 'photo') {
-        return answer !== null && answer !== '';
-      }
-      
-      if (!answer) return false;
-      
-      if (q.allowText && answer === 'Добавить замечания (указать текстом)') {
-        const textComment = getTextComment(q.id);
-        return textComment.trim() !== '';
-      }
-      
-      return true;
-    });
+  const isCurrentQuestionComplete = () => {
+    if (!currentQuestion) return false;
+    const answer = getCurrentAnswer(currentQuestion.id);
+    
+    if (currentQuestion.type === 'photo') {
+      return answer !== null && answer !== '';
+    }
+    
+    if (!answer) return false;
+    
+    if (currentQuestion.allowText && answer === 'Добавить замечания (указать текстом)') {
+      const textComment = getTextComment(currentQuestion.id);
+      return textComment.trim() !== '';
+    }
+    
+    return true;
   };
 
-  const answeredInSection = currentSection?.questions.filter(q => getCurrentAnswer(q.id)).length || 0;
-  const totalInSection = currentSection?.questions.length || 0;
+  const totalQuestions = availableSections.reduce((sum, section) => sum + section.questions.length, 0);
+  const answeredQuestions = availableSections.reduce((sum, section) => 
+    sum + section.questions.filter(q => getCurrentAnswer(q.id)).length, 0
+  );
+  const currentGlobalQuestionNumber = availableSections
+    .slice(0, currentSectionIndex)
+    .reduce((sum, section) => sum + section.questions.length, 0) + currentQuestionIndex + 1;
 
   if (step === 'mechanic') {
     return (
@@ -233,6 +247,13 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
     );
   }
 
+  if (!currentQuestion) return null;
+
+  const currentAnswer = getCurrentAnswer(currentQuestion.id);
+  const showTextInput = currentQuestion.allowText && currentAnswer === 'Добавить замечания (указать текстом)';
+  const isLastQuestion = currentSectionIndex === availableSections.length - 1 && 
+                         currentQuestionIndex === (currentSection?.questions.length || 0) - 1;
+
   return (
     <Card className="w-full max-w-2xl mx-auto bg-slate-800 border-slate-700">
       <CardHeader>
@@ -244,115 +265,108 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
             </CardDescription>
           </div>
           <Badge variant="outline" className="text-slate-300">
-            Раздел {currentSectionIndex + 1} из {availableSections.length}
+            Вопрос {currentGlobalQuestionNumber} из {totalQuestions}
           </Badge>
         </div>
         <div className="flex items-center gap-2 mt-4">
           <div className="flex-1 bg-slate-700 rounded-full h-2">
             <div 
               className="bg-blue-500 h-2 rounded-full transition-all"
-              style={{ width: `${(answeredInSection / totalInSection) * 100}%` }}
+              style={{ width: `${(answeredQuestions / totalQuestions) * 100}%` }}
             />
           </div>
-          <span className="text-sm text-slate-400">{answeredInSection}/{totalInSection}</span>
+          <span className="text-sm text-slate-400">{answeredQuestions}/{totalQuestions}</span>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {currentSection?.questions.map((question) => {
-          const currentAnswer = getCurrentAnswer(question.id);
-          const showTextInput = question.allowText && currentAnswer === 'Добавить замечания (указать текстом)';
+      <CardContent className="space-y-6">
+        <div className="bg-slate-900/50 rounded-lg p-6 border border-slate-700 space-y-4 min-h-[300px]">
+          <Label className="text-slate-100 block font-medium text-lg">{currentQuestion.text}</Label>
           
-          return (
-            <div key={question.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 space-y-3">
-              <Label className="text-slate-100 block font-medium">{question.text}</Label>
-              
-              {question.type === 'photo' && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-slate-400">
-                    <Icon name="ImagePlus" size={18} className="text-orange-400" />
-                    <span>Прикрепление фото обязательно</span>
-                  </div>
-                  <Button
-                    variant={currentAnswer ? "default" : "outline"}
-                    size="lg"
-                    className="w-full flex items-center justify-center gap-3"
-                    onClick={() => {
-                      toast({ title: 'Функция в разработке', description: 'Загрузка фото будет доступна позже' });
-                      handleAnswer(question.id, 'Фото прикреплено');
-                    }}
-                  >
-                    <Icon name="Camera" size={20} />
-                    {currentAnswer ? 'Фото прикреплено ✓' : 'Прикрепить фото'}
-                  </Button>
-                </div>
-              )}
-              
-              {question.type === 'choice' && question.options && (
-                <RadioGroup 
-                  value={currentAnswer || ''} 
-                  onValueChange={(value) => handleAnswer(question.id, value)}
-                >
-                  <div className="space-y-2">
-                    {question.options.map((option) => (
-                      <div key={option} className="flex items-center space-x-2">
-                        <RadioGroupItem value={option} id={`${question.id}-${option}`} />
-                        <Label 
-                          htmlFor={`${question.id}-${option}`}
-                          className="text-slate-300 cursor-pointer"
-                        >
-                          {option}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </RadioGroup>
-              )}
-              
-              {showTextInput && (
-                <div className="pt-2">
-                  <Label className="text-slate-400 text-sm">Укажите подробнее:</Label>
-                  <Textarea
-                    value={getTextComment(question.id)}
-                    onChange={(e) => handleTextComment(question.id, e.target.value)}
-                    placeholder="Введите текст..."
-                    className="bg-slate-800 border-slate-600 mt-1"
-                    rows={3}
-                  />
-                </div>
-              )}
-              
-              {question.allowPhoto && question.type === 'choice' && currentAnswer && currentAnswer !== 'Доп. Фото нет' && (
-                <div className="pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                    onClick={() => toast({ title: 'Функция в разработке', description: 'Загрузка фото будет доступна позже' })}
-                  >
-                    <Icon name="Camera" size={16} />
-                    Прикрепить фото (опционально)
-                  </Button>
-                </div>
-              )}
+          {currentQuestion.type === 'photo' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <Icon name="ImagePlus" size={18} className="text-orange-400" />
+                <span>Прикрепление фото обязательно</span>
+              </div>
+              <Button
+                variant={currentAnswer ? "default" : "outline"}
+                size="lg"
+                className="w-full flex items-center justify-center gap-3 h-14 text-base"
+                onClick={() => {
+                  toast({ title: 'Функция в разработке', description: 'Загрузка фото будет доступна позже' });
+                  handleAnswer(currentQuestion.id, 'Фото прикреплено');
+                }}
+              >
+                <Icon name="Camera" size={24} />
+                {currentAnswer ? 'Фото прикреплено ✓' : 'Прикрепить фото'}
+              </Button>
             </div>
-          );
-        })}
+          )}
+          
+          {currentQuestion.type === 'choice' && currentQuestion.options && (
+            <RadioGroup 
+              value={currentAnswer || ''} 
+              onValueChange={(value) => handleAnswer(currentQuestion.id, value)}
+            >
+              <div className="space-y-3">
+                {currentQuestion.options.map((option) => (
+                  <div key={option} className="flex items-center space-x-3 bg-slate-800/50 p-3 rounded-lg hover:bg-slate-800 transition-colors">
+                    <RadioGroupItem value={option} id={`${currentQuestion.id}-${option}`} />
+                    <Label 
+                      htmlFor={`${currentQuestion.id}-${option}`}
+                      className="text-slate-300 cursor-pointer flex-1"
+                    >
+                      {option}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </RadioGroup>
+          )}
+          
+          {showTextInput && (
+            <div className="pt-2">
+              <Label className="text-slate-400 text-sm">Укажите подробнее:</Label>
+              <Textarea
+                value={getTextComment(currentQuestion.id)}
+                onChange={(e) => handleTextComment(currentQuestion.id, e.target.value)}
+                placeholder="Введите текст..."
+                className="bg-slate-800 border-slate-600 mt-2"
+                rows={4}
+              />
+            </div>
+          )}
+          
+          {currentQuestion.allowPhoto && currentQuestion.type === 'choice' && currentAnswer && currentAnswer !== 'Доп. Фото нет' && (
+            <div className="pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => toast({ title: 'Функция в разработке', description: 'Загрузка фото будет доступна позже' })}
+              >
+                <Icon name="Camera" size={16} />
+                Прикрепить фото (опционально)
+              </Button>
+            </div>
+          )}
+        </div>
 
         <div className="flex justify-between pt-4">
           <Button 
             variant="outline" 
             onClick={handleBack}
-            disabled={currentSectionIndex === 0}
+            disabled={currentSectionIndex === 0 && currentQuestionIndex === 0}
           >
             <Icon name="ChevronLeft" size={16} className="mr-1" />
             Назад
           </Button>
           <Button 
             onClick={handleNext}
-            disabled={!isCurrentSectionComplete()}
+            disabled={!isCurrentQuestionComplete()}
           >
-            {currentSectionIndex === availableSections.length - 1 ? 'Завершить' : 'Далее'}
-            {currentSectionIndex < availableSections.length - 1 && <Icon name="ChevronRight" size={16} className="ml-1" />}
+            {isLastQuestion ? 'Завершить' : 'Далее'}
+            {!isLastQuestion && <Icon name="ChevronRight" size={16} className="ml-1" />}
           </Button>
         </div>
       </CardContent>
