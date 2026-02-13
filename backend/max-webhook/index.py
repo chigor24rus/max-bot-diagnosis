@@ -1460,38 +1460,19 @@ def handle_priemka_photo(sender_id: str, session: dict, attachments: list):
 
         session['waiting_for_photo'] = False
 
-        q_type = question.get('type', 'photo') if question else 'photo'
-        if q_type == 'choice' and question.get('allow_photo'):
-            extra_count = session.get('priemka_extra_photos', 0) + 1
-            session['priemka_extra_photos'] = extra_count
-
-            if question['id'] == 20:
-                response_text = f'✅ Фото сохранено! (доп. фото: {extra_count})\n\nМожете прикрепить ещё фото или продолжить.'
-                session['waiting_for_photo'] = True
-                save_session(str(sender_id), session)
-                buttons = [
-                    [{'type': 'callback', 'text': '➡️ Далее', 'payload': f"priemka_answer:{question['id']}:no_extra"}]
-                ]
-                if session.get('question_index', 0) > 0:
-                    buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}])
-                send_message(sender_id, response_text, buttons)
-                return
-            else:
-                session['priemka_extra_photos'] = 0
-                session['question_index'] = question_index + 1
-                save_session(str(sender_id), session)
-                response_text = '✅ Фото сохранено!'
-                send_message(sender_id, response_text)
-                send_priemka_question(sender_id, session)
-                return
-
-        session['question_index'] = question_index + 1
-        session['priemka_extra_photos'] = 0
+        extra_count = session.get('priemka_extra_photos', 0) + 1
+        session['priemka_extra_photos'] = extra_count
+        session['waiting_for_photo'] = True
         save_session(str(sender_id), session)
 
-        response_text = '✅ Фото сохранено!'
-        send_message(sender_id, response_text)
-        send_priemka_question(sender_id, session)
+        payload_action = 'no_extra' if question and question['id'] == 20 else 'next_step'
+        response_text = f'✅ Фото сохранено! (фото: {extra_count})\n\nМожете прикрепить ещё фото или нажмите "Далее".'
+        buttons = [
+            [{'type': 'callback', 'text': '➡️ Далее', 'payload': f"priemka_answer:{question['id']}:{payload_action}"}]
+        ]
+        if question_index > 0:
+            buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}])
+        send_message(sender_id, response_text, buttons)
 
     except Exception as e:
         print(f"[ERROR] Priemka photo upload failed: {str(e)}")
@@ -1534,6 +1515,14 @@ def handle_priemka_callback(sender_id: str, session: dict, payload: str):
         send_priemka_question(sender_id, session)
         return
 
+    if answer_value == 'next_step':
+        session['question_index'] += 1
+        session['waiting_for_photo'] = False
+        session['priemka_extra_photos'] = 0
+        save_session(str(sender_id), session)
+        send_priemka_question(sender_id, session)
+        return
+
     if answer_value == 'not_applicable':
         save_priemka_answer(diagnostic_id, question_id, question['title'], 'Не предусмотрено', None)
         session['question_index'] += 1
@@ -1544,7 +1533,6 @@ def handle_priemka_callback(sender_id: str, session: dict, payload: str):
         return
 
     if answer_value == 'no_extra':
-        save_priemka_answer(diagnostic_id, question_id, question['title'], 'Доп. фото нет', None)
         session['question_index'] += 1
         session['waiting_for_photo'] = False
         session['priemka_extra_photos'] = 0

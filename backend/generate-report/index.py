@@ -385,8 +385,8 @@ def handler(event: dict, context) -> dict:
                         try:
                             photo_resp = urllib.request.urlopen(photo_url)
                             photo_data = photo_resp.read()
-                            img_reader = ImageReader(BytesIO(photo_data))
-                            img = Image(img_reader, width=130*mm, height=97*mm)
+                            img_buf = BytesIO(photo_data)
+                            img = Image(img_buf, width=130*mm, height=97*mm)
                             story.append(Spacer(1, 2*mm))
                             story.append(img)
                         except Exception as e:
