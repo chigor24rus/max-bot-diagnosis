@@ -439,9 +439,10 @@ def handler(event: dict, context) -> dict:
                 for question_num, item in broken_items:
                     story.append(Paragraph(f'• {item}', item_style))
                     
-                    if with_photos and question_num in photos_by_question:
+                    photo_key = question_num - 1
+                    if with_photos and photo_key in photos_by_question:
                         story.append(Spacer(1, 2*mm))
-                        for photo_item in photos_by_question[question_num]:
+                        for photo_item in photos_by_question[photo_key]:
                             photo_url = photo_item['url'] if isinstance(photo_item, dict) else photo_item
                             photo_caption = photo_item.get('caption') if isinstance(photo_item, dict) else None
                             try:
