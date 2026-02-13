@@ -359,31 +359,28 @@ def handle_callback(update: dict):
                 response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
                 send_message(sender_id, response_text)
         else:
-            diagnostic_id = save_diagnostic(session)
+            type_labels = {'dhch': 'ДХЧ', 'des': 'ДЭС'}
+            type_label = type_labels.get(diagnostic_type, diagnostic_type)
             
-            if diagnostic_id:
-                type_labels = {'dhch': 'ДХЧ', 'des': 'ДЭС'}
-                type_label = type_labels.get(diagnostic_type, diagnostic_type)
-                
-                response_text = f'''✅ Диагностика №{diagnostic_id} сохранена!
-
-📋 Сводка:
-━━━━━━━━━━━━━━━━
-👤 Механик: {session['mechanic']}
-🚗 Госномер: {session['car_number']}
-🛣 Пробег: {session['mileage']:,} км
-🔧 Тип: {type_label}
-━━━━━━━━━━━━━━━━
-
-Диагностика завершена!'''.replace(',', ' ')
-                
-                buttons = [[{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]]
-                send_message(sender_id, response_text, buttons)
-                session = {'step': 0}
-                save_session(str(sender_id), session)
-            else:
-                response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
-                send_message(sender_id, response_text)
+            response_text = f'🚧 Раздел «{type_label}» в разработке.\n\nВыберите другой тип диагностики или начните заново.'
+            buttons = [
+                [{'type': 'callback', 'text': '⬅️ Выбрать другой тип', 'payload': 'back_to_type'}],
+                [{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]
+            ]
+            send_message(sender_id, response_text, buttons)
+    
+    elif payload == 'back_to_type':
+        session['step'] = 4
+        session.pop('diagnostic_type', None)
+        save_session(str(sender_id), session)
+        response_text = 'Выберите тип диагностики:'
+        buttons = [
+            [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
+            [{'type': 'callback', 'text': '5-ти минутка', 'payload': 'type:5min'}],
+            [{'type': 'callback', 'text': 'ДХЧ', 'payload': 'type:dhch'}],
+            [{'type': 'callback', 'text': 'ДЭС', 'payload': 'type:des'}]
+        ]
+        send_message(sender_id, response_text, buttons)
     
     elif payload.startswith('priemka_answer:'):
         handle_priemka_callback(sender_id, session, payload)
