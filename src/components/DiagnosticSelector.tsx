@@ -33,20 +33,6 @@ const DiagnosticSelector = ({ onSelectType, onCancel }: DiagnosticSelectorProps)
         </Button>
 
         <Button
-          onClick={() => onSelectType('dhch')}
-          className="w-full justify-start h-auto py-4"
-          variant="outline"
-        >
-          <div className="flex items-start gap-3 text-left">
-            <Icon name="Wrench" size={24} className="text-primary mt-1 flex-shrink-0" />
-            <div>
-              <div className="font-semibold text-white">ДХЧ</div>
-              <div className="text-sm text-slate-400">Диагностика ходовой части</div>
-            </div>
-          </div>
-        </Button>
-
-        <Button
           onClick={() => onSelectType('5min')}
           className="w-full justify-start h-auto py-4"
           variant="outline"
@@ -57,6 +43,20 @@ const DiagnosticSelector = ({ onSelectType, onCancel }: DiagnosticSelectorProps)
             <div>
               <div className="font-semibold text-slate-400">5-ти минутка</div>
               <div className="text-sm text-slate-500">Быстрый осмотр (скоро)</div>
+            </div>
+          </div>
+        </Button>
+
+        <Button
+          onClick={() => onSelectType('dhch')}
+          className="w-full justify-start h-auto py-4"
+          variant="outline"
+        >
+          <div className="flex items-start gap-3 text-left">
+            <Icon name="Wrench" size={24} className="text-primary mt-1 flex-shrink-0" />
+            <div>
+              <div className="font-semibold text-white">ДХЧ</div>
+              <div className="text-sm text-slate-400">Диагностика ходовой части</div>
             </div>
           </div>
         </Button>
