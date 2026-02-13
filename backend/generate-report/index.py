@@ -1,5 +1,6 @@
 import json
 import os
+import gc
 import psycopg2
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -15,6 +16,24 @@ from reportlab.pdfbase.ttfonts import TTFont
 import boto3
 from io import BytesIO
 import urllib.request
+from PIL import Image as PILImage
+
+
+def compress_photo(photo_data, max_dimension=1200, quality=60):
+    """Сжимает фото для экономии памяти"""
+    pil_img = PILImage.open(BytesIO(photo_data))
+    if pil_img.mode in ('RGBA', 'P'):
+        pil_img = pil_img.convert('RGB')
+    w, h = pil_img.size
+    if w > max_dimension or h > max_dimension:
+        ratio = min(max_dimension / w, max_dimension / h)
+        pil_img = pil_img.resize((int(w * ratio), int(h * ratio)), PILImage.LANCZOS)
+    buf = BytesIO()
+    pil_img.save(buf, format='JPEG', quality=quality, optimize=True)
+    pil_img.close()
+    compressed = buf.getvalue()
+    buf.close()
+    return compressed
 
 def handler(event: dict, context) -> dict:
     '''API для генерации PDF отчёта по диагностике автомобиля'''
@@ -402,24 +421,29 @@ def handler(event: dict, context) -> dict:
                 )
                 
                 q_index = question_num - 1
-                if q_index in priemka_photos_by_q and answer_value not in ('Не предусмотрено', 'Доп. фото нет', 'Замечаний нет'):
+                if q_index in priemka_photos_by_q and answer_value not in ('Не предусмотрено', 'Доп. фото нет', 'Замечаний нет', 'Доп. Фото нет'):
                     for photo_item in priemka_photos_by_q.pop(q_index):
                         photo_url = photo_item['url']
                         photo_caption = photo_item.get('caption')
                         try:
                             photo_resp = urllib.request.urlopen(photo_url)
-                            photo_data = photo_resp.read()
+                            raw_data = photo_resp.read()
+                            photo_resp.close()
+                            photo_data = compress_photo(raw_data)
+                            del raw_data
                             img_reader = ImageReader(BytesIO(photo_data))
                             iw, ih = img_reader.getSize()
                             max_w = 130*mm
                             max_h = 180*mm
                             scale = min(max_w / iw, max_h / ih)
                             img = Image(BytesIO(photo_data), width=iw*scale, height=ih*scale)
+                            del photo_data
                             block.append(Spacer(1, 2*mm))
                             block.append(img)
                             if photo_caption:
                                 block.append(Spacer(1, 1*mm))
                                 block.append(Paragraph(f'<i>Комментарий: {photo_caption}</i>', caption_style))
+                            gc.collect()
                         except Exception as e:
                             print(f"[WARNING] Could not load priemka photo {photo_url}: {str(e)}")
                 
@@ -459,18 +483,23 @@ def handler(event: dict, context) -> dict:
                             photo_caption = photo_item.get('caption') if isinstance(photo_item, dict) else None
                             try:
                                 photo_response = urllib.request.urlopen(photo_url)
-                                photo_data = photo_response.read()
+                                raw_data = photo_response.read()
+                                photo_response.close()
+                                photo_data = compress_photo(raw_data)
+                                del raw_data
                                 img_reader = ImageReader(BytesIO(photo_data))
                                 iw, ih = img_reader.getSize()
                                 max_w = 130*mm
                                 max_h = 180*mm
                                 scale = min(max_w / iw, max_h / ih)
                                 img = Image(BytesIO(photo_data), width=iw*scale, height=ih*scale)
+                                del photo_data
                                 block.append(Spacer(1, 2*mm))
                                 block.append(img)
                                 if photo_caption:
                                     block.append(Spacer(1, 1*mm))
                                     block.append(Paragraph(f'<i>Комментарий: {photo_caption}</i>', caption_style))
+                                gc.collect()
                             except Exception as e:
                                 print(f"[WARNING] Could not load photo {photo_url}: {str(e)}")
                     
