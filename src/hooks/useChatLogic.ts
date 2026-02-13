@@ -9,6 +9,7 @@ export const mechanics = [
 ];
 
 export const diagnosticTypes = [
+  { value: 'priemka', label: 'Приемка' },
   { value: '5min', label: '5-ти минутка' },
   { value: 'dhch', label: 'ДХЧ' },
   { value: 'des', label: 'ДЭС' }
