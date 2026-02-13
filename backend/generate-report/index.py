@@ -436,12 +436,24 @@ def handler(event: dict, context) -> dict:
             
             if broken_items:
                 story.append(Paragraph('Обнаруженные неисправности:', section_style))
+                
+                caption_style = ParagraphStyle(
+                    'PhotoCaption',
+                    fontName=font_name,
+                    fontSize=9,
+                    alignment=TA_LEFT,
+                    spaceAfter=2,
+                    textColor=colors.HexColor('#555555'),
+                    leftIndent=10
+                )
+                
                 for question_num, item in broken_items:
-                    story.append(Paragraph(f'• {item}', item_style))
+                    block = []
+                    block.append(Paragraph(f'• {item}', item_style))
                     
                     photo_key = question_num - 1
                     if with_photos and photo_key in photos_by_question:
-                        story.append(Spacer(1, 2*mm))
+                        block.append(Spacer(1, 2*mm))
                         for photo_item in photos_by_question[photo_key]:
                             photo_url = photo_item['url'] if isinstance(photo_item, dict) else photo_item
                             photo_caption = photo_item.get('caption') if isinstance(photo_item, dict) else None
@@ -450,17 +462,20 @@ def handler(event: dict, context) -> dict:
                                 photo_data = photo_response.read()
                                 img_reader = ImageReader(BytesIO(photo_data))
                                 iw, ih = img_reader.getSize()
-                                max_w = 120*mm
+                                max_w = 130*mm
                                 max_h = 180*mm
                                 scale = min(max_w / iw, max_h / ih)
                                 img = Image(BytesIO(photo_data), width=iw*scale, height=ih*scale)
-                                story.append(img)
+                                block.append(Spacer(1, 2*mm))
+                                block.append(img)
                                 if photo_caption:
-                                    cap_style = ParagraphStyle('PhotoCaption', fontName=font_name, fontSize=9, textColor=colors.HexColor('#555555'), leftIndent=10)
-                                    story.append(Paragraph(f'<i>Комментарий: {photo_caption}</i>', cap_style))
-                                story.append(Spacer(1, 2*mm))
+                                    block.append(Spacer(1, 1*mm))
+                                    block.append(Paragraph(f'<i>Комментарий: {photo_caption}</i>', caption_style))
                             except Exception as e:
                                 print(f"[WARNING] Could not load photo {photo_url}: {str(e)}")
+                    
+                    block.append(Spacer(1, 4*mm))
+                    story.append(KeepTogether(block))
                 
                 story.append(Spacer(1, 8*mm))
         
