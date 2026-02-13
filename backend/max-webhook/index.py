@@ -194,7 +194,7 @@ def handle_message(update: dict):
     # Обработка фото в режиме чек-листа
     if session.get('step') == 5 and session.get('waiting_for_photo'):
         if attachments:
-            handle_photo_upload(sender_id, session, attachments)
+            handle_photo_upload(sender_id, session, attachments, user_text)
         else:
             response_text = '⚠️ Пожалуйста, прикрепите фото дефекта или нажмите "Пропустить фото".'
             buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
@@ -970,7 +970,7 @@ def handle_text_answer(sender_id: str, session: dict, user_text: str):
     send_checklist_question(sender_id, session)
 
 
-def handle_photo_upload(sender_id: str, session: dict, attachments: list):
+def handle_photo_upload(sender_id: str, session: dict, attachments: list, caption: str = ''):
     '''Обработка загрузки фото дефекта'''
     try:
         # Ищем фото в attachments
@@ -1027,9 +1027,9 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list):
         try:
             cur = photo_conn.cursor()
             cur.execute(
-                f"INSERT INTO {schema}.diagnostic_photos (diagnostic_id, question_index, photo_url) "
-                f"VALUES (%s, %s, %s)",
-                (diagnostic_id, question_index, cdn_url)
+                f"INSERT INTO {schema}.diagnostic_photos (diagnostic_id, question_index, photo_url, caption) "
+                f"VALUES (%s, %s, %s, %s)",
+                (diagnostic_id, question_index, cdn_url, caption if caption else None)
             )
             photo_conn.commit()
             cur.close()
