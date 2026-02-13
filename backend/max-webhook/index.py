@@ -1350,6 +1350,13 @@ def send_priemka_question(sender_id: str, session: dict):
         return
 
     question = questions[question_index]
+
+    if question['id'] == 10 and session.get('skip_rear_right_door'):
+        save_priemka_answer(session.get('diagnostic_id'), 10, question['title'], 'Не предусмотрено', None)
+        session['question_index'] += 1
+        save_session(str(sender_id), session)
+        send_priemka_question(sender_id, session)
+        return
     total = len(questions)
     q_type = question.get('type', 'photo')
 
@@ -1462,7 +1469,7 @@ def handle_priemka_photo(sender_id: str, session: dict, attachments: list):
         session['waiting_for_photo'] = True
         save_session(str(sender_id), session)
 
-        payload_action = 'no_extra' if question and question['id'] == 20 else 'next_step'
+        payload_action = 'no_extra' if question and question['id'] == 21 else 'next_step'
         response_text = f'✅ Фото сохранено! (фото: {extra_count})\n\nМожете прикрепить ещё фото или нажмите "Далее".'
         buttons = [
             [{'type': 'callback', 'text': '➡️ Далее', 'payload': f"priemka_answer:{question['id']}:{payload_action}"}]
@@ -1522,6 +1529,8 @@ def handle_priemka_callback(sender_id: str, session: dict, payload: str):
 
     if answer_value == 'not_applicable':
         save_priemka_answer(diagnostic_id, question_id, question['title'], 'Не предусмотрено', None)
+        if question_id == 6:
+            session['skip_rear_right_door'] = True
         session['question_index'] += 1
         session['waiting_for_photo'] = False
         session['priemka_extra_photos'] = 0
@@ -1579,6 +1588,11 @@ def handle_priemka_back(sender_id: str, session: dict):
         prev_index = question_index - 1
         questions = get_priemka_questions()
         prev_question = questions[prev_index] if prev_index < len(questions) else None
+
+        if prev_question and prev_question['id'] == 10 and session.get('skip_rear_right_door'):
+            delete_priemka_answer(diagnostic_id, prev_question['id'])
+            prev_index -= 1
+            prev_question = questions[prev_index] if prev_index >= 0 and prev_index < len(questions) else None
 
         if prev_question and diagnostic_id:
             delete_priemka_answer(diagnostic_id, prev_question['id'])

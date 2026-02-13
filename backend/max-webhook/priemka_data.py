@@ -122,6 +122,11 @@ def get_priemka_questions():
         },
         {
             'id': 20,
+            'title': 'Фото ключей со всех сторон',
+            'type': 'photo',
+        },
+        {
+            'id': 21,
             'title': 'Дополнительные фото при необходимости',
             'type': 'choice',
             'options': [
@@ -130,7 +135,7 @@ def get_priemka_questions():
             'allow_photo': True,
         },
         {
-            'id': 21,
+            'id': 22,
             'title': 'Иные замечания',
             'type': 'text_choice',
             'options': [

@@ -122,6 +122,12 @@ export const priemkaSections: Section[] = [
         allowPhoto: true
       },
       {
+        id: 'photo_keys',
+        text: 'Фото ключей со всех сторон',
+        type: 'photo',
+        allowPhoto: true
+      },
+      {
         id: 'photo_additional',
         text: 'Дополнительные фото при необходимости',
         type: 'choice',
