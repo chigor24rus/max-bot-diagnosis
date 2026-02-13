@@ -242,7 +242,7 @@ const DiagnosticsManager = ({
                   type="date"
                   value={deleteDateFrom}
                   onChange={(e) => setDeleteDateFrom(e.target.value)}
-                  className="bg-slate-900 border-slate-700"
+                  className="bg-slate-900 border-slate-700 text-white"
                 />
               </div>
               <div>
@@ -251,7 +251,7 @@ const DiagnosticsManager = ({
                   type="date"
                   value={deleteDateTo}
                   onChange={(e) => setDeleteDateTo(e.target.value)}
-                  className="bg-slate-900 border-slate-700"
+                  className="bg-slate-900 border-slate-700 text-white"
                 />
               </div>
             </div>
@@ -273,7 +273,7 @@ const DiagnosticsManager = ({
                   placeholder="Поиск по гос.номеру или механику..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-slate-900 border-slate-700 flex-1"
+                  className="bg-slate-900 border-slate-700 text-white flex-1"
                 />
                 <Button
                   variant="outline"
@@ -289,7 +289,7 @@ const DiagnosticsManager = ({
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Механик:</label>
                   <Select value={filterMechanic} onValueChange={setFilterMechanic}>
-                    <SelectTrigger className="bg-slate-900 border-slate-700">
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -304,7 +304,7 @@ const DiagnosticsManager = ({
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Тип:</label>
                   <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger className="bg-slate-900 border-slate-700">
+                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -322,7 +322,7 @@ const DiagnosticsManager = ({
                     type="date"
                     value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="bg-slate-900 border-slate-700"
+                    className="bg-slate-900 border-slate-700 text-white"
                   />
                 </div>
 
@@ -332,7 +332,7 @@ const DiagnosticsManager = ({
                     type="date"
                     value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="bg-slate-900 border-slate-700"
+                    className="bg-slate-900 border-slate-700 text-white"
                   />
                 </div>
               </div>
@@ -351,7 +351,7 @@ const DiagnosticsManager = ({
                       Показано {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredDiagnostics.length)} из {filteredDiagnostics.length}
                     </div>
                     <Select value={itemsPerPage.toString()} onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
-                      <SelectTrigger className="w-32 h-8 bg-slate-900 border-slate-700">
+                      <SelectTrigger className="w-32 h-8 bg-slate-900 border-slate-700 text-white">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
