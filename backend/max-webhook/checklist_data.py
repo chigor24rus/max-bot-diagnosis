@@ -52,8 +52,8 @@ def get_checklist_questions_full():
                     'allowMultiple': True,
                     'subOptions': [
                         {
-                            'value': 'right',
-                            'label': 'Передняя правая',
+                            'value': 'left',
+                            'label': 'Передняя левая',
                             'subOptions': [
                                 {'value': 'smearing', 'label': 'Мажет'},
                                 {'value': 'damaged', 'label': 'Повреждена'},
@@ -61,8 +61,8 @@ def get_checklist_questions_full():
                             ],
                         },
                         {
-                            'value': 'left',
-                            'label': 'Передняя левая',
+                            'value': 'right',
+                            'label': 'Передняя правая',
                             'subOptions': [
                                 {'value': 'smearing', 'label': 'Мажет'},
                                 {'value': 'damaged', 'label': 'Повреждена'},
@@ -139,8 +139,8 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
                         {'value': 'left', 'label': 'Слева'},
+                        {'value': 'right', 'label': 'Справа'},
                     ],
                 },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
@@ -156,8 +156,8 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
                         {'value': 'left', 'label': 'Слева'},
+                        {'value': 'right', 'label': 'Справа'},
                     ],
                 },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
@@ -173,8 +173,8 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
                         {'value': 'left', 'label': 'Слева'},
+                        {'value': 'right', 'label': 'Справа'},
                     ],
                 },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
@@ -190,8 +190,8 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
                         {'value': 'left', 'label': 'Слева'},
+                        {'value': 'right', 'label': 'Справа'},
                     ],
                 },
                 {'value': 'na', 'label': 'Не предусмотрено'},
@@ -208,12 +208,12 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right_main', 'label': 'Справа основной'},
-                        {'value': 'right_mirror', 'label': 'Справа зеркало'},
-                        {'value': 'right_wing', 'label': 'Справа крыло'},
                         {'value': 'left_main', 'label': 'Слева основной'},
                         {'value': 'left_mirror', 'label': 'Слева зеркало'},
                         {'value': 'left_wing', 'label': 'Слева крыло'},
+                        {'value': 'right_main', 'label': 'Справа основной'},
+                        {'value': 'right_mirror', 'label': 'Справа зеркало'},
+                        {'value': 'right_wing', 'label': 'Справа крыло'},
                     ],
                 },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
@@ -294,8 +294,8 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
                         {'value': 'left', 'label': 'Слева'},
+                        {'value': 'right', 'label': 'Справа'},
                     ],
                 },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
@@ -311,8 +311,8 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
                         {'value': 'left', 'label': 'Слева'},
+                        {'value': 'right', 'label': 'Справа'},
                     ],
                 },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
@@ -328,8 +328,8 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
                         {'value': 'left', 'label': 'Слева'},
+                        {'value': 'right', 'label': 'Справа'},
                     ],
                 },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
@@ -345,9 +345,9 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
-                        {'value': 'center', 'label': 'Центральный'},
                         {'value': 'left', 'label': 'Слева'},
+                        {'value': 'center', 'label': 'Центральный'},
+                        {'value': 'right', 'label': 'Справа'},
                     ],
                 },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
@@ -363,8 +363,8 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
                         {'value': 'left', 'label': 'Слева'},
+                        {'value': 'right', 'label': 'Справа'},
                     ],
                 },
                 {'value': 'other', 'label': 'Иное (указать текстом)'},
@@ -380,8 +380,8 @@ def get_checklist_questions_full():
                     'label': 'Неисправно',
                     'allowMultiple': True,
                     'subOptions': [
-                        {'value': 'right', 'label': 'Справа'},
                         {'value': 'left', 'label': 'Слева'},
+                        {'value': 'right', 'label': 'Справа'},
                     ],
                 },
                 {'value': 'na', 'label': 'Не предусмотрено'},
