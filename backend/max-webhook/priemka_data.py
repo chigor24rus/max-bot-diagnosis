@@ -93,7 +93,11 @@ def get_priemka_questions():
         {
             'id': 14,
             'title': 'Фото наружных повреждённых элементов крупно',
-            'type': 'photo',
+            'type': 'choice',
+            'options': [
+                {'value': 'no_extra', 'label': 'Доп. фото нет'},
+            ],
+            'allow_photo': True,
         },
         {
             'id': 15,

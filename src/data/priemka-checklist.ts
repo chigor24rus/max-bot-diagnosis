@@ -88,7 +88,8 @@ export const priemkaSections: Section[] = [
       {
         id: 'photo_damaged_elements',
         text: 'Фото наружних повреждённых элементов крупно',
-        type: 'photo',
+        type: 'choice',
+        options: ['Назад', 'Доп. Фото нет'],
         allowPhoto: true
       },
       {
