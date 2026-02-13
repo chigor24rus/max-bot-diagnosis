@@ -126,9 +126,14 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
     if (!currentSection) return false;
     return currentSection.questions.every(q => {
       const answer = getCurrentAnswer(q.id);
+      
+      if (q.type === 'photo') {
+        return answer !== null && answer !== '';
+      }
+      
       if (!answer) return false;
       
-      if (q.allowText && answer === 'Иное (указать текстом)') {
+      if (q.allowText && answer === 'Добавить замечания (указать текстом)') {
         const textComment = getTextComment(q.id);
         return textComment.trim() !== '';
       }
@@ -255,11 +260,33 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
       <CardContent className="space-y-4">
         {currentSection?.questions.map((question) => {
           const currentAnswer = getCurrentAnswer(question.id);
-          const showTextInput = question.allowText && currentAnswer === 'Иное (указать текстом)';
+          const showTextInput = question.allowText && currentAnswer === 'Добавить замечания (указать текстом)';
           
           return (
             <div key={question.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 space-y-3">
-              <Label className="text-slate-100 block">{question.text}</Label>
+              <Label className="text-slate-100 block font-medium">{question.text}</Label>
+              
+              {question.type === 'photo' && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-slate-400">
+                    <Icon name="ImagePlus" size={18} className="text-orange-400" />
+                    <span>Прикрепление фото обязательно</span>
+                  </div>
+                  <Button
+                    variant={currentAnswer ? "default" : "outline"}
+                    size="lg"
+                    className="w-full flex items-center justify-center gap-3"
+                    onClick={() => {
+                      toast({ title: 'Функция в разработке', description: 'Загрузка фото будет доступна позже' });
+                      handleAnswer(question.id, 'Фото прикреплено');
+                    }}
+                  >
+                    <Icon name="Camera" size={20} />
+                    {currentAnswer ? 'Фото прикреплено ✓' : 'Прикрепить фото'}
+                  </Button>
+                </div>
+              )}
+              
               {question.type === 'choice' && question.options && (
                 <RadioGroup 
                   value={currentAnswer || ''} 
@@ -294,7 +321,7 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
                 </div>
               )}
               
-              {question.allowPhoto && currentAnswer && (
+              {question.allowPhoto && question.type === 'choice' && currentAnswer && currentAnswer !== 'Доп. Фото нет' && (
                 <div className="pt-2">
                   <Button
                     variant="outline"
