@@ -6,7 +6,7 @@ from zoneinfo import ZoneInfo
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak, Frame, PageTemplate, BaseDocTemplate, NextPageTemplate
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak, Frame, PageTemplate, BaseDocTemplate, NextPageTemplate, KeepTogether
 from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -375,10 +375,11 @@ def handler(event: dict, context) -> dict:
                 priemka_photos_by_q[q_idx].append(p_url)
             
             for question_num, question_text, answer_value, sub_answers in checklist_rows:
-                story.append(Paragraph(f'<b>{question_text}</b>', item_style))
+                block = []
+                block.append(Paragraph(f'<b>{question_text}</b>', item_style))
                 
                 if answer_value and answer_value not in ('Фото прикреплено',):
-                    story.append(Paragraph(f'  {answer_value}', item_style))
+                    block.append(Paragraph(f'  {answer_value}', item_style))
                 
                 q_index = question_num - 1
                 if q_index in priemka_photos_by_q:
@@ -392,12 +393,13 @@ def handler(event: dict, context) -> dict:
                             max_h = 180*mm
                             scale = min(max_w / iw, max_h / ih)
                             img = Image(BytesIO(photo_data), width=iw*scale, height=ih*scale)
-                            story.append(Spacer(1, 2*mm))
-                            story.append(img)
+                            block.append(Spacer(1, 2*mm))
+                            block.append(img)
                         except Exception as e:
                             print(f"[WARNING] Could not load priemka photo {photo_url}: {str(e)}")
                 
-                story.append(Spacer(1, 4*mm))
+                block.append(Spacer(1, 4*mm))
+                story.append(KeepTogether(block))
         else:
             if working_items:
                 story.append(Paragraph('Проверенные исправные узлы и детали автомобиля', section_style))
