@@ -114,7 +114,7 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     const data: DiagnosticData = {
       id: crypto.randomUUID(),
       type: 'priemka',
@@ -125,6 +125,33 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
       answers,
       createdAt: new Date().toISOString(),
     };
+
+    try {
+      const response = await fetch('https://max.ru/id245900919213_bot/api/diagnostic', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Ошибка отправки данных в MAX-бот');
+      }
+
+      toast({
+        title: 'Успешно',
+        description: 'Данные диагностики отправлены в MAX-бот',
+      });
+    } catch (error) {
+      console.error('Error sending to MAX bot:', error);
+      toast({
+        title: 'Предупреждение',
+        description: 'Данные сохранены локально, но не удалось отправить в MAX-бот',
+        variant: 'destructive',
+      });
+    }
+
     onComplete(data);
   };
 
