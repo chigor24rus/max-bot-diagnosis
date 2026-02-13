@@ -9,6 +9,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from io import BytesIO
 from checklist_data import get_checklist_questions_full
+from priemka_data import get_priemka_questions
 
 # Connection pool для оптимизации работы с БД
 _db_pool = None
@@ -177,6 +178,25 @@ def handle_message(update: dict):
             send_message(sender_id, response_text, buttons)
         return
     
+    # Обработка фото в режиме Приемки
+    if session.get('step') == 6 and session.get('waiting_for_photo'):
+        if attachments:
+            handle_priemka_photo(sender_id, session, attachments)
+        else:
+            response_text = '⚠️ Пожалуйста, прикрепите фото.'
+            buttons = [[{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}]]
+            send_message(sender_id, response_text, buttons)
+        return
+    
+    # Обработка текста в режиме Приемки (замечания)
+    if session.get('step') == 6 and session.get('waiting_for_text'):
+        if user_text:
+            handle_priemka_text(sender_id, session, user_text)
+        else:
+            response_text = '⚠️ Пожалуйста, введите текст замечания.'
+            send_message(sender_id, response_text)
+        return
+    
     lower_text = user_text.lower()
     
     # Команды
@@ -255,6 +275,7 @@ def handle_message(update: dict):
             save_session(str(sender_id), session)
             response_text = f'✅ Пробег {int(mileage_str):,} км принят!\n\nТеперь выберите тип диагностики:'.replace(',', ' ')
             buttons = [
+                [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
                 [{'type': 'callback', 'text': '5-ти минутка', 'payload': 'type:5min'}],
                 [{'type': 'callback', 'text': 'ДХЧ', 'payload': 'type:dhch'}],
                 [{'type': 'callback', 'text': 'ДЭС', 'payload': 'type:des'}]
@@ -306,12 +327,24 @@ def handle_callback(update: dict):
         session['diagnostic_type'] = diagnostic_type
         save_session(str(sender_id), session)
         
-        # Если выбрана "5-ти минутка" - начинаем чек-лист
-        if diagnostic_type == '5min':
-            # Сохраняем диагностику в БД
+        if diagnostic_type == 'priemka':
             diagnostic_id = save_diagnostic(session)
             if diagnostic_id:
-                # Очищаем данные предыдущей диагностики
+                session.pop('waiting_for_photo', None)
+                session.pop('waiting_for_text', None)
+                session.pop('priemka_extra_photos', None)
+                
+                session['diagnostic_id'] = diagnostic_id
+                session['question_index'] = 0
+                session['step'] = 6
+                save_session(str(sender_id), session)
+                send_priemka_question(sender_id, session)
+            else:
+                response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
+                send_message(sender_id, response_text)
+        elif diagnostic_type == '5min':
+            diagnostic_id = save_diagnostic(session)
+            if diagnostic_id:
                 session.pop('sub_question_mode', None)
                 session.pop('sub_question_path', None)
                 session.pop('sub_selections', None)
@@ -326,7 +359,6 @@ def handle_callback(update: dict):
                 response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
                 send_message(sender_id, response_text)
         else:
-            # ДХЧ и ДЭС - сохраняем без чек-листа
             diagnostic_id = save_diagnostic(session)
             
             if diagnostic_id:
@@ -353,8 +385,13 @@ def handle_callback(update: dict):
                 response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
                 send_message(sender_id, response_text)
     
+    elif payload.startswith('priemka_answer:'):
+        handle_priemka_callback(sender_id, session, payload)
+    
+    elif payload == 'priemka_back':
+        handle_priemka_back(sender_id, session)
+    
     elif payload.startswith('answer:'):
-        # Обработка ответа на вопрос чек-листа
         handle_checklist_answer(sender_id, session, payload)
     
     elif payload.startswith('sub_answer:'):
@@ -1304,6 +1341,380 @@ def finish_checklist(sender_id: str, session: dict):
     # Сброс сессии
     session = {'step': 0}
     save_session(str(sender_id), session)
+
+
+def send_priemka_question(sender_id: str, session: dict):
+    '''Отправляет текущий вопрос Приемки'''
+    questions = get_priemka_questions()
+    question_index = session.get('question_index', 0)
+
+    if question_index >= len(questions):
+        finish_priemka(sender_id, session)
+        return
+
+    question = questions[question_index]
+    total = len(questions)
+    q_type = question.get('type', 'photo')
+
+    progress_text = f'📋 Приемка — шаг {question_index + 1} из {total}\n\n{question["title"]}'
+
+    if q_type == 'photo':
+        session['waiting_for_photo'] = True
+        save_session(str(sender_id), session)
+        response_text = f'{progress_text}\n\n📸 Прикрепите фото.'
+        buttons = []
+        if question_index > 0:
+            buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}])
+        send_message(sender_id, response_text, buttons if buttons else None)
+
+    elif q_type == 'choice':
+        session['waiting_for_photo'] = question.get('allow_photo', False)
+        save_session(str(sender_id), session)
+        buttons = []
+        if question.get('allow_photo'):
+            response_text = f'{progress_text}\n\n📸 Прикрепите фото или выберите вариант:'
+        else:
+            response_text = progress_text
+        for opt in question.get('options', []):
+            buttons.append([{
+                'type': 'callback',
+                'text': opt['label'],
+                'payload': f"priemka_answer:{question['id']}:{opt['value']}"
+            }])
+        if question_index > 0:
+            buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}])
+        send_message(sender_id, response_text, buttons)
+
+    elif q_type == 'text_choice':
+        session['waiting_for_photo'] = False
+        session['waiting_for_text'] = False
+        save_session(str(sender_id), session)
+        buttons = []
+        for opt in question.get('options', []):
+            buttons.append([{
+                'type': 'callback',
+                'text': opt['label'],
+                'payload': f"priemka_answer:{question['id']}:{opt['value']}"
+            }])
+        if question_index > 0:
+            buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}])
+        send_message(sender_id, progress_text, buttons)
+
+
+def handle_priemka_photo(sender_id: str, session: dict, attachments: list):
+    '''Обработка фото в режиме Приемки'''
+    try:
+        photo_url = None
+        for attachment in attachments:
+            if attachment.get('type') == 'image':
+                payload = attachment.get('payload', {})
+                photo_url = payload.get('url')
+                break
+
+        if not photo_url:
+            response_text = '⚠️ Не найдено фото. Попробуйте ещё раз.'
+            buttons = [[{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}]]
+            send_message(sender_id, response_text, buttons)
+            return
+
+        photo_response = requests.get(photo_url, timeout=15)
+        if photo_response.status_code != 200:
+            response_text = '⚠️ Не удалось загрузить фото. Попробуйте ещё раз.'
+            send_message(sender_id, response_text)
+            return
+
+        diagnostic_id = session.get('diagnostic_id')
+        question_index = session.get('question_index', 0)
+        questions = get_priemka_questions()
+        question = questions[question_index] if question_index < len(questions) else None
+
+        krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
+        now = datetime.now(krasnoyarsk_tz)
+        file_key = f"diagnostics/{diagnostic_id}/priemka_q{question_index + 1}_{now.strftime('%Y%m%d_%H%M%S')}.jpg"
+
+        s3 = boto3.client('s3',
+            endpoint_url='https://bucket.poehali.dev',
+            aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+        )
+        s3.put_object(Bucket='files', Key=file_key, Body=photo_response.content, ContentType='image/jpeg')
+        cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
+
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        db_pool = get_db_pool()
+        photo_conn = db_pool.getconn()
+        try:
+            cur = photo_conn.cursor()
+            cur.execute(
+                f"INSERT INTO {schema}.diagnostic_photos (diagnostic_id, question_index, photo_url) "
+                f"VALUES (%s, %s, %s)",
+                (diagnostic_id, question_index, cdn_url)
+            )
+            photo_conn.commit()
+            cur.close()
+        finally:
+            db_pool.putconn(photo_conn)
+
+        if question:
+            save_priemka_answer(diagnostic_id, question['id'], question['title'], 'Фото прикреплено', cdn_url)
+
+        session['waiting_for_photo'] = False
+
+        q_type = question.get('type', 'photo') if question else 'photo'
+        if q_type == 'choice' and question.get('allow_photo'):
+            extra_count = session.get('priemka_extra_photos', 0) + 1
+            session['priemka_extra_photos'] = extra_count
+
+            if question['id'] == 20:
+                response_text = f'✅ Фото сохранено! (доп. фото: {extra_count})\n\nМожете прикрепить ещё фото или продолжить.'
+                session['waiting_for_photo'] = True
+                save_session(str(sender_id), session)
+                buttons = [
+                    [{'type': 'callback', 'text': '➡️ Далее', 'payload': f"priemka_answer:{question['id']}:no_extra"}]
+                ]
+                if session.get('question_index', 0) > 0:
+                    buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}])
+                send_message(sender_id, response_text, buttons)
+                return
+            else:
+                session['priemka_extra_photos'] = 0
+                session['question_index'] = question_index + 1
+                save_session(str(sender_id), session)
+                response_text = '✅ Фото сохранено!'
+                send_message(sender_id, response_text)
+                send_priemka_question(sender_id, session)
+                return
+
+        session['question_index'] = question_index + 1
+        session['priemka_extra_photos'] = 0
+        save_session(str(sender_id), session)
+
+        response_text = '✅ Фото сохранено!'
+        send_message(sender_id, response_text)
+        send_priemka_question(sender_id, session)
+
+    except Exception as e:
+        print(f"[ERROR] Priemka photo upload failed: {str(e)}")
+        import traceback
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
+        response_text = '⚠️ Ошибка при загрузке фото. Попробуйте ещё раз.'
+        send_message(sender_id, response_text)
+
+
+def handle_priemka_callback(sender_id: str, session: dict, payload: str):
+    '''Обработка нажатий кнопок в Приемке'''
+    parts = payload.split(':')
+    if len(parts) < 3:
+        return
+
+    question_id = int(parts[1])
+    answer_value = parts[2]
+
+    questions = get_priemka_questions()
+    question = next((q for q in questions if q['id'] == question_id), None)
+    if not question:
+        return
+
+    diagnostic_id = session.get('diagnostic_id')
+
+    if answer_value == 'add_notes':
+        session['waiting_for_text'] = True
+        session['waiting_for_text_question_id'] = question_id
+        save_session(str(sender_id), session)
+        response_text = '✏️ Введите замечания текстом:'
+        send_message(sender_id, response_text)
+        return
+
+    if answer_value == 'complete':
+        save_priemka_answer(diagnostic_id, question_id, question['title'], 'Замечаний нет', None)
+        session['question_index'] += 1
+        session['waiting_for_photo'] = False
+        session['waiting_for_text'] = False
+        save_session(str(sender_id), session)
+        send_priemka_question(sender_id, session)
+        return
+
+    if answer_value == 'not_applicable':
+        save_priemka_answer(diagnostic_id, question_id, question['title'], 'Не предусмотрено', None)
+        session['question_index'] += 1
+        session['waiting_for_photo'] = False
+        session['priemka_extra_photos'] = 0
+        save_session(str(sender_id), session)
+        send_priemka_question(sender_id, session)
+        return
+
+    if answer_value == 'no_extra':
+        save_priemka_answer(diagnostic_id, question_id, question['title'], 'Доп. фото нет', None)
+        session['question_index'] += 1
+        session['waiting_for_photo'] = False
+        session['priemka_extra_photos'] = 0
+        save_session(str(sender_id), session)
+        send_priemka_question(sender_id, session)
+        return
+
+    opt_label = next((o['label'] for o in question.get('options', []) if o['value'] == answer_value), answer_value)
+    save_priemka_answer(diagnostic_id, question_id, question['title'], opt_label, None)
+    session['question_index'] += 1
+    session['waiting_for_photo'] = False
+    save_session(str(sender_id), session)
+    send_priemka_question(sender_id, session)
+
+
+def handle_priemka_text(sender_id: str, session: dict, user_text: str):
+    '''Обработка текстового замечания в Приемке'''
+    question_id = session.get('waiting_for_text_question_id')
+    diagnostic_id = session.get('diagnostic_id')
+
+    if not question_id or not diagnostic_id:
+        return
+
+    questions = get_priemka_questions()
+    question = next((q for q in questions if q['id'] == question_id), None)
+    if not question:
+        return
+
+    save_priemka_answer(diagnostic_id, question_id, question['title'], f'Замечания: {user_text}', None)
+
+    session['waiting_for_text'] = False
+    session.pop('waiting_for_text_question_id', None)
+    session['question_index'] += 1
+    save_session(str(sender_id), session)
+
+    response_text = '✅ Замечание сохранено!'
+    send_message(sender_id, response_text)
+    send_priemka_question(sender_id, session)
+
+
+def handle_priemka_back(sender_id: str, session: dict):
+    '''Возврат к предыдущему шагу Приемки'''
+    question_index = session.get('question_index', 0)
+
+    if question_index > 0:
+        diagnostic_id = session.get('diagnostic_id')
+        prev_index = question_index - 1
+        questions = get_priemka_questions()
+        prev_question = questions[prev_index] if prev_index < len(questions) else None
+
+        if prev_question and diagnostic_id:
+            delete_priemka_answer(diagnostic_id, prev_question['id'])
+
+        session['question_index'] = prev_index
+        session['waiting_for_photo'] = False
+        session['waiting_for_text'] = False
+        session['priemka_extra_photos'] = 0
+        save_session(str(sender_id), session)
+
+    send_priemka_question(sender_id, session)
+
+
+def save_priemka_answer(diagnostic_id: int, question_number: int, question_text: str, answer_value: str, photo_url: str):
+    '''Сохраняет ответ Приемки в checklist_answers'''
+    conn = None
+    try:
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
+        cur = conn.cursor()
+
+        if photo_url:
+            cur.execute(
+                f"INSERT INTO {schema}.checklist_answers (diagnostic_id, question_number, question_text, answer_type, answer_value, photo_urls) "
+                f"VALUES (%s, %s, %s, 'priemka', %s, ARRAY[%s])",
+                (diagnostic_id, question_number, question_text, answer_value, photo_url)
+            )
+        else:
+            cur.execute(
+                f"INSERT INTO {schema}.checklist_answers (diagnostic_id, question_number, question_text, answer_type, answer_value) "
+                f"VALUES (%s, %s, %s, 'priemka', %s)",
+                (diagnostic_id, question_number, question_text, answer_value)
+            )
+
+        conn.commit()
+        cur.close()
+        print(f"[SUCCESS] Saved priemka answer for question {question_number}")
+        return True
+    except Exception as e:
+        print(f"[ERROR] Failed to save priemka answer: {str(e)}")
+        return False
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
+
+
+def delete_priemka_answer(diagnostic_id: int, question_number: int):
+    '''Удаляет ответ Приемки при возврате назад'''
+    conn = None
+    try:
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
+        cur = conn.cursor()
+        cur.execute(
+            f"DELETE FROM {schema}.checklist_answers WHERE diagnostic_id = %s AND question_number = %s",
+            (diagnostic_id, question_number)
+        )
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        print(f"[ERROR] Failed to delete priemka answer: {str(e)}")
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
+
+
+def finish_priemka(sender_id: str, session: dict):
+    '''Завершение Приемки и генерация отчёта'''
+    diagnostic_id = session.get('diagnostic_id')
+    report_url_base = "https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6"
+
+    response_text = f'✅ Приемка №{diagnostic_id} завершена!'
+
+    try:
+        response_with_photos = requests.get(f"{report_url_base}?id={diagnostic_id}&with_photos=true", timeout=60)
+        pdf_url = None
+        if response_with_photos.status_code == 200:
+            result = response_with_photos.json()
+            pdf_url = result.get('pdfUrl')
+
+        if pdf_url:
+            response_text = f'''✅ Приемка №{diagnostic_id} завершена!
+
+📋 Сводка:
+━━━━━━━━━━━━━━━━
+👤 Механик: {session['mechanic']}
+🚗 Госномер: {session['car_number']}
+🛣 Пробег: {session['mileage']:,} км
+🔧 Тип: Приемка
+━━━━━━━━━━━━━━━━
+
+📄 Отчёт готов!
+{pdf_url}'''.replace(',', ' ')
+        else:
+            response_text = f'''✅ Приемка №{diagnostic_id} завершена!
+
+📋 Сводка:
+━━━━━━━━━━━━━━━━
+👤 Механик: {session['mechanic']}
+🚗 Госномер: {session['car_number']}
+🛣 Пробег: {session['mileage']:,} км
+🔧 Тип: Приемка
+━━━━━━━━━━━━━━━━
+
+📋 Данные сохранены, отчет временно недоступен.'''.replace(',', ' ')
+    except Exception as e:
+        print(f"[ERROR] Failed to generate priemka report: {str(e)}")
+        import traceback
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
+
+    buttons = [[{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]]
+    send_message(sender_id, response_text, buttons)
+
+    session_data = {
+        'step': 0,
+        'mechanic': session.get('mechanic'),
+        'mechanic_id': session.get('mechanic_id'),
+    }
+    save_session(str(sender_id), session_data)
 
 
 def send_message(user_id: int, text: str, buttons: list = None):

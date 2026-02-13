@@ -315,7 +315,8 @@ def handler(event: dict, context) -> dict:
             fontWeight='bold'
         )
         
-        story.append(Paragraph('Отчет по осмотру автомобиля', title_style))
+        report_title = 'Акт приемки автомобиля' if diagnostic_data.get('diagnosticType') == 'priemka' else 'Отчет по осмотру автомобиля'
+        story.append(Paragraph(report_title, title_style))
         story.append(Spacer(1, 8*mm))
         
         info_style = ParagraphStyle(
@@ -353,33 +354,73 @@ def handler(event: dict, context) -> dict:
             leftIndent=10
         )
         
-        if working_items:
-            story.append(Paragraph('Проверенные исправные узлы и детали автомобиля', section_style))
-            for item in working_items:
-                story.append(Paragraph(f'• {item}', item_style))
-            story.append(Spacer(1, 6*mm))
+        is_priemka = diagnostic_data.get('diagnosticType') == 'priemka'
         
-        story.append(NextPageTemplate('other_pages'))
-        
-        if broken_items:
-            story.append(Paragraph('Обнаруженные неисправности:', section_style))
-            for question_num, item in broken_items:
-                story.append(Paragraph(f'• {item}', item_style))
-                
-                if with_photos and question_num in photos_by_question:
-                    story.append(Spacer(1, 2*mm))
-                    for photo_url in photos_by_question[question_num]:
-                        try:
-                            photo_response = urllib.request.urlopen(photo_url)
-                            photo_data = photo_response.read()
-                            img_reader = ImageReader(BytesIO(photo_data))
-                            img = Image(img_reader, width=120*mm, height=90*mm)
-                            story.append(img)
-                            story.append(Spacer(1, 2*mm))
-                        except Exception as e:
-                            print(f"[WARNING] Could not load photo {photo_url}: {str(e)}")
+        if is_priemka:
+            story.append(Paragraph('Фотофиксация автомобиля', section_style))
+            story.append(Spacer(1, 4*mm))
             
-            story.append(Spacer(1, 8*mm))
+            story.append(NextPageTemplate('other_pages'))
+            
+            priemka_photos_by_q = {}
+            cur.execute(
+                f"SELECT question_index, photo_url FROM {schema}.diagnostic_photos "
+                f"WHERE diagnostic_id = {diagnostic_id} ORDER BY question_index, created_at"
+            )
+            priemka_photo_rows = cur.fetchall()
+            for q_idx, p_url in priemka_photo_rows:
+                if q_idx not in priemka_photos_by_q:
+                    priemka_photos_by_q[q_idx] = []
+                priemka_photos_by_q[q_idx].append(p_url)
+            
+            for question_num, question_text, answer_value, sub_answers in checklist_rows:
+                story.append(Paragraph(f'<b>{question_text}</b>', item_style))
+                
+                if answer_value and answer_value not in ('Фото прикреплено',):
+                    story.append(Paragraph(f'  {answer_value}', item_style))
+                
+                q_index = question_num - 1
+                if q_index in priemka_photos_by_q:
+                    for photo_url in priemka_photos_by_q[q_index]:
+                        try:
+                            photo_resp = urllib.request.urlopen(photo_url)
+                            photo_data = photo_resp.read()
+                            img_reader = ImageReader(BytesIO(photo_data))
+                            img = Image(img_reader, width=130*mm, height=97*mm)
+                            story.append(Spacer(1, 2*mm))
+                            story.append(img)
+                        except Exception as e:
+                            print(f"[WARNING] Could not load priemka photo {photo_url}: {str(e)}")
+                
+                story.append(Spacer(1, 4*mm))
+        else:
+            if working_items:
+                story.append(Paragraph('Проверенные исправные узлы и детали автомобиля', section_style))
+                for item in working_items:
+                    story.append(Paragraph(f'• {item}', item_style))
+                story.append(Spacer(1, 6*mm))
+            
+            story.append(NextPageTemplate('other_pages'))
+            
+            if broken_items:
+                story.append(Paragraph('Обнаруженные неисправности:', section_style))
+                for question_num, item in broken_items:
+                    story.append(Paragraph(f'• {item}', item_style))
+                    
+                    if with_photos and question_num in photos_by_question:
+                        story.append(Spacer(1, 2*mm))
+                        for photo_url in photos_by_question[question_num]:
+                            try:
+                                photo_response = urllib.request.urlopen(photo_url)
+                                photo_data = photo_response.read()
+                                img_reader = ImageReader(BytesIO(photo_data))
+                                img = Image(img_reader, width=120*mm, height=90*mm)
+                                story.append(img)
+                                story.append(Spacer(1, 2*mm))
+                            except Exception as e:
+                                print(f"[WARNING] Could not load photo {photo_url}: {str(e)}")
+                
+                story.append(Spacer(1, 8*mm))
         
         doc.build(story)
         
