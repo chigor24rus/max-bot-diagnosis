@@ -2,6 +2,7 @@ import json
 import os
 import psycopg2
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 def handler(event: dict, context) -> dict:
     '''API для сохранения и получения диагностик автомобилей'''
@@ -46,9 +47,11 @@ def handler(event: dict, context) -> dict:
                     'isBase64Encoded': False
                 }
             
+            krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
+            now_krsk = datetime.now(krasnoyarsk_tz).strftime('%Y-%m-%d %H:%M:%S')
             cur.execute(
-                f"INSERT INTO {schema}.diagnostics (mechanic, car_number, mileage, diagnostic_type) "
-                f"VALUES ('{mechanic}', '{car_number}', {mileage}, '{diagnostic_type}') RETURNING id, created_at"
+                f"INSERT INTO {schema}.diagnostics (mechanic, car_number, mileage, diagnostic_type, created_at, updated_at) "
+                f"VALUES ('{mechanic}', '{car_number}', {mileage}, '{diagnostic_type}', '{now_krsk}', '{now_krsk}') RETURNING id, created_at"
             )
             result = cur.fetchone()
             diagnostic_id = result[0]
