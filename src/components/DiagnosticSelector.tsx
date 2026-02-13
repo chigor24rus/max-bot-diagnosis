@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 
 interface DiagnosticSelectorProps {
-  onSelectType: (type: 'dhch' | '5min' | 'des') => void;
+  onSelectType: (type: 'priemka' | 'dhch' | '5min' | 'des') => void;
   onCancel: () => void;
 }
 
@@ -18,6 +18,20 @@ const DiagnosticSelector = ({ onSelectType, onCancel }: DiagnosticSelectorProps)
         <CardDescription>Выберите тип диагностики для проведения</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
+        <Button
+          onClick={() => onSelectType('priemka')}
+          className="w-full justify-start h-auto py-4"
+          variant="outline"
+        >
+          <div className="flex items-start gap-3 text-left">
+            <Icon name="ClipboardCheck" size={24} className="text-primary mt-1 flex-shrink-0" />
+            <div>
+              <div className="font-semibold text-white">Приемка</div>
+              <div className="text-sm text-slate-400">Приемка автомобиля</div>
+            </div>
+          </div>
+        </Button>
+
         <Button
           onClick={() => onSelectType('dhch')}
           className="w-full justify-start h-auto py-4"

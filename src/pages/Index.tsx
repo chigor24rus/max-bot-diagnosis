@@ -11,12 +11,13 @@ import ChecklistWizard from '@/components/ChecklistWizard';
 import MechanicAuth from '@/components/MechanicAuth';
 import DiagnosticSelector from '@/components/DiagnosticSelector';
 import DiagnosticDHCH from '@/components/DiagnosticDHCH';
+import DiagnosticPriemka from '@/components/DiagnosticPriemka';
 import { useChatLogic } from '@/hooks/useChatLogic';
 import { DiagnosticData } from '@/types/diagnostic';
 
 const Index = () => {
   const [mechanic, setMechanic] = useState<{ id: number; name: string } | null>(null);
-  const [diagnosticView, setDiagnosticView] = useState<'selector' | 'dhch' | null>(null);
+  const [diagnosticView, setDiagnosticView] = useState<'selector' | 'priemka' | 'dhch' | null>(null);
 
   useEffect(() => {
     // Проверяем сохранённые данные авторизации
@@ -43,8 +44,10 @@ const Index = () => {
     setActiveTab('diagnostic');
   };
 
-  const handleDiagnosticTypeSelect = (type: 'dhch' | '5min' | 'des') => {
-    if (type === 'dhch') {
+  const handleDiagnosticTypeSelect = (type: 'priemka' | 'dhch' | '5min' | 'des') => {
+    if (type === 'priemka') {
+      setDiagnosticView('priemka');
+    } else if (type === 'dhch') {
       setDiagnosticView('dhch');
     }
   };
@@ -172,6 +175,12 @@ const Index = () => {
             {diagnosticView === 'selector' && (
               <DiagnosticSelector
                 onSelectType={handleDiagnosticTypeSelect}
+                onCancel={handleDiagnosticCancel}
+              />
+            )}
+            {diagnosticView === 'priemka' && (
+              <DiagnosticPriemka
+                onComplete={handleDiagnosticComplete}
                 onCancel={handleDiagnosticCancel}
               />
             )}

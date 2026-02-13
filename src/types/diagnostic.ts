@@ -31,13 +31,16 @@ export interface DiagnosticAnswer {
 }
 
 export interface DiagnosticData {
+  id?: string;
+  type?: 'priemka' | 'dhch' | '5min' | 'des';
   mechanicId?: number;
-  mechanicName: string;
-  carNumber: string;
-  mileage: number;
-  diagnosticType: string;
+  mechanicName?: string;
+  carNumber?: string;
+  mileage?: string;
+  diagnosticType?: string;
   driveType?: DriveType;
-  answers: DiagnosticAnswer[];
-  currentSection: string;
-  completedSections: string[];
+  answers?: DiagnosticAnswer[];
+  currentSection?: string;
+  completedSections?: string[];
+  createdAt?: string;
 }
