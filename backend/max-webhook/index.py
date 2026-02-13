@@ -1666,7 +1666,20 @@ def finish_priemka(sender_id: str, session: dict):
     diagnostic_id = session.get('diagnostic_id')
     report_url_base = "https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6"
 
-    response_text = f'✅ Приемка №{diagnostic_id} завершена!'
+    mechanic = session.get('mechanic', '—')
+    car_number = session.get('car_number', '—')
+    mileage = session.get('mileage', 0)
+    mileage_str = f'{mileage:,}'.replace(',', ' ')
+
+    summary = f'''📋 Сводка:
+━━━━━━━━━━━━━━━━
+👤 Механик: {mechanic}
+🚗 Госномер: {car_number}
+🛣 Пробег: {mileage_str} км
+🔧 Тип: Приемка
+━━━━━━━━━━━━━━━━'''
+
+    response_text = f'✅ Приемка №{diagnostic_id} завершена!\n\n{summary}'
 
     try:
         response_with_photos = requests.get(f"{report_url_base}?id={diagnostic_id}&with_photos=true", timeout=60)
@@ -1676,34 +1689,14 @@ def finish_priemka(sender_id: str, session: dict):
             pdf_url = result.get('pdfUrl')
 
         if pdf_url:
-            response_text = f'''✅ Приемка №{diagnostic_id} завершена!
-
-📋 Сводка:
-━━━━━━━━━━━━━━━━
-👤 Механик: {session['mechanic']}
-🚗 Госномер: {session['car_number']}
-🛣 Пробег: {session['mileage']:,} км
-🔧 Тип: Приемка
-━━━━━━━━━━━━━━━━
-
-📄 Отчёт готов!
-{pdf_url}'''.replace(',', ' ')
+            response_text = f'✅ Приемка №{diagnostic_id} завершена!\n\n{summary}\n\n📄 Отчёт готов!\n{pdf_url}'
         else:
-            response_text = f'''✅ Приемка №{diagnostic_id} завершена!
-
-📋 Сводка:
-━━━━━━━━━━━━━━━━
-👤 Механик: {session['mechanic']}
-🚗 Госномер: {session['car_number']}
-🛣 Пробег: {session['mileage']:,} км
-🔧 Тип: Приемка
-━━━━━━━━━━━━━━━━
-
-📋 Данные сохранены, отчет временно недоступен.'''.replace(',', ' ')
+            response_text = f'✅ Приемка №{diagnostic_id} завершена!\n\n{summary}\n\n📋 Данные сохранены, отчет временно недоступен.'
     except Exception as e:
         print(f"[ERROR] Failed to generate priemka report: {str(e)}")
         import traceback
         print(f"[ERROR] Traceback: {traceback.format_exc()}")
+        response_text = f'✅ Приемка №{diagnostic_id} завершена!\n\n{summary}\n\n📋 Данные сохранены, отчет временно недоступен.'
 
     buttons = [[{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]]
     send_message(sender_id, response_text, buttons)
