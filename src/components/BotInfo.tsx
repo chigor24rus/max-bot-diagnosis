@@ -4,7 +4,7 @@ import Icon from '@/components/ui/icon';
 
 const BotInfo = () => {
   return (
-    <div className="space-y-4">
+    <div className="p-4 space-y-4">
       <Card className="bg-gradient-to-br from-primary/10 via-slate-900/50 to-accent/10 border-primary/20">
         <CardHeader className="text-center pb-4">
           <div className="mx-auto mb-4 w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-2xl">

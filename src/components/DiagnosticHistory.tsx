@@ -146,7 +146,7 @@ const DiagnosticHistory = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 space-y-4">
       <Card className="bg-slate-900/50 border-slate-700">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">

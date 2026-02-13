@@ -109,8 +109,8 @@ const Index = () => {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="bg-slate-900/50 border-b border-slate-700 rounded-none w-full justify-start px-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+          <TabsList className="bg-slate-900/50 border-b border-slate-700 rounded-none w-full justify-start px-4 shrink-0">
             <TabsTrigger value="chat" className="flex items-center gap-2">
               <Icon name="MessageSquare" size={16} />
               Чат
@@ -129,7 +129,7 @@ const Index = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="chat" className="flex-1 flex flex-col overflow-hidden m-0">
+          <TabsContent value="chat" className="flex-1 flex flex-col m-0 data-[state=active]:flex data-[state=inactive]:hidden overflow-hidden">
             {showChecklistWizard ? (
               <div className="flex-1 overflow-y-auto p-4">
                 <ChecklistWizard
@@ -163,7 +163,7 @@ const Index = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="diagnostic" className="flex-1 overflow-y-auto p-4 m-0">
+          <TabsContent value="diagnostic" className="flex-1 p-4 m-0 data-[state=active]:flex data-[state=inactive]:hidden overflow-y-auto">
             {diagnosticView === null && (
               <div className="flex items-center justify-center h-full">
                 <Button onClick={handleStartDiagnostic} size="lg" className="flex items-center gap-2">
@@ -192,11 +192,11 @@ const Index = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="history" className="flex-1 overflow-y-auto m-0">
+          <TabsContent value="history" className="flex-1 m-0 p-0 data-[state=active]:block data-[state=inactive]:hidden overflow-y-auto">
             <DiagnosticHistory />
           </TabsContent>
 
-          <TabsContent value="info" className="flex-1 overflow-y-auto m-0">
+          <TabsContent value="info" className="flex-1 m-0 p-0 data-[state=active]:block data-[state=inactive]:hidden overflow-y-auto">
             <BotInfo />
           </TabsContent>
         </Tabs>
