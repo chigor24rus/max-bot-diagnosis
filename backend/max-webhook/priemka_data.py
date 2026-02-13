@@ -134,7 +134,7 @@ def get_priemka_questions():
             'title': 'Иные замечания',
             'type': 'text_choice',
             'options': [
-                {'value': 'add_notes', 'label': 'Добавить замечания (указать текстом)'},
+                {'value': 'add_notes', 'label': 'Добавить замечания (текстом)'},
                 {'value': 'complete', 'label': 'Завершить, замечаний нет'},
             ],
         },
