@@ -254,8 +254,9 @@ def handler(event: dict, context) -> dict:
         
         krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
         created_at_local = diagnostic_data['createdAt'].astimezone(krasnoyarsk_tz)
-        footer_date = created_at_local.strftime('%d.%m.%Y')
-        footer_time = created_at_local.strftime('%H:%M')
+        now_krasnoyarsk = datetime.now(krasnoyarsk_tz)
+        footer_date = now_krasnoyarsk.strftime('%d.%m.%Y')
+        footer_time = now_krasnoyarsk.strftime('%H:%M')
         
         def add_first_page_background(canvas, doc):
             canvas.saveState()
