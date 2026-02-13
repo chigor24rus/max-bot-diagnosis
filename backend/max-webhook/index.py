@@ -23,31 +23,54 @@ def get_db_pool():
     return _db_pool
 
 
+def reset_db_pool():
+    '''Сброс connection pool при ошибках соединения'''
+    global _db_pool
+    if _db_pool:
+        try:
+            _db_pool.closeall()
+        except Exception:
+            pass
+    _db_pool = None
+
+
 def get_session(user_id: str) -> dict:
     '''Получение сессии пользователя из БД'''
-    conn = None
-    try:
-        schema = os.environ.get('MAIN_DB_SCHEMA')
-        db_pool = get_db_pool()
-        conn = db_pool.getconn()
-        cur = conn.cursor()
-        
-        cur.execute(
-            f"SELECT session_data FROM {schema}.max_sessions WHERE user_id = %s",
-            (user_id,)
-        )
-        row = cur.fetchone()
-        cur.close()
-        
-        if row:
-            return row[0]
-        return {'step': 0}
-    except Exception as e:
-        print(f"[ERROR] Failed to get session: {str(e)}")
-        return {'step': 0}
-    finally:
-        if conn:
-            get_db_pool().putconn(conn)
+    for attempt in range(2):
+        conn = None
+        try:
+            schema = os.environ.get('MAIN_DB_SCHEMA')
+            db_pool = get_db_pool()
+            conn = db_pool.getconn()
+            cur = conn.cursor()
+            
+            cur.execute(
+                f"SELECT session_data FROM {schema}.max_sessions WHERE user_id = %s",
+                (user_id,)
+            )
+            row = cur.fetchone()
+            cur.close()
+            
+            if row:
+                return row[0]
+            return {'step': 0}
+        except Exception as e:
+            print(f"[ERROR] Failed to get session (attempt {attempt + 1}): {str(e)}")
+            if conn:
+                try:
+                    get_db_pool().putconn(conn, close=True)
+                except Exception:
+                    pass
+                conn = None
+            reset_db_pool()
+            if attempt == 1:
+                return {'step': 0}
+        finally:
+            if conn:
+                try:
+                    get_db_pool().putconn(conn)
+                except Exception:
+                    pass
 
 
 def save_session(user_id: str, session: dict):
