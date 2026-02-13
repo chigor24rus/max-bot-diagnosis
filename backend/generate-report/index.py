@@ -253,10 +253,13 @@ def handler(event: dict, context) -> dict:
         page_width, page_height = A4
         
         krasnoyarsk_tz = ZoneInfo('Asia/Krasnoyarsk')
-        created_at_local = diagnostic_data['createdAt'].astimezone(krasnoyarsk_tz)
-        now_krasnoyarsk = datetime.now(krasnoyarsk_tz)
-        footer_date = now_krasnoyarsk.strftime('%d.%m.%Y')
-        footer_time = now_krasnoyarsk.strftime('%H:%M')
+        created_at_raw = diagnostic_data['createdAt']
+        if created_at_raw.tzinfo is None:
+            created_at_local = created_at_raw.replace(tzinfo=krasnoyarsk_tz)
+        else:
+            created_at_local = created_at_raw.astimezone(krasnoyarsk_tz)
+        footer_date = created_at_local.strftime('%d.%m.%Y')
+        footer_time = created_at_local.strftime('%H:%M')
         
         def add_first_page_background(canvas, doc):
             canvas.saveState()
