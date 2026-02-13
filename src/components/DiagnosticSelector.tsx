@@ -51,12 +51,13 @@ const DiagnosticSelector = ({ onSelectType, onCancel }: DiagnosticSelectorProps)
           onClick={() => onSelectType('dhch')}
           className="w-full justify-start h-auto py-3 sm:py-4"
           variant="outline"
+          disabled
         >
           <div className="flex items-start gap-2 sm:gap-3 text-left">
-            <Icon name="Wrench" size={20} className="text-primary mt-0.5 sm:mt-1 flex-shrink-0 sm:w-6 sm:h-6" />
+            <Icon name="Wrench" size={20} className="text-slate-500 mt-0.5 sm:mt-1 flex-shrink-0 sm:w-6 sm:h-6" />
             <div>
-              <div className="font-semibold text-white text-sm sm:text-base">ДХЧ</div>
-              <div className="text-xs sm:text-sm text-slate-400">Диагностика ходовой части</div>
+              <div className="font-semibold text-slate-400 text-sm sm:text-base">ДХЧ</div>
+              <div className="text-xs sm:text-sm text-slate-500">Раздел в разработке</div>
             </div>
           </div>
         </Button>
@@ -71,7 +72,7 @@ const DiagnosticSelector = ({ onSelectType, onCancel }: DiagnosticSelectorProps)
             <Icon name="Zap" size={20} className="text-slate-500 mt-0.5 sm:mt-1 flex-shrink-0 sm:w-6 sm:h-6" />
             <div>
               <div className="font-semibold text-slate-400 text-sm sm:text-base">ДЭС</div>
-              <div className="text-xs sm:text-sm text-slate-500">Диагностика электросистем (скоро)</div>
+              <div className="text-xs sm:text-sm text-slate-500">Раздел в разработке</div>
             </div>
           </div>
         </Button>
