@@ -101,14 +101,17 @@ def handler(event: dict, context) -> dict:
         photos_by_question = {}
         if with_photos:
             cur.execute(
-                f"SELECT question_index, photo_url FROM {schema}.diagnostic_photos "
+                f"SELECT question_index, photo_url, caption FROM {schema}.diagnostic_photos "
                 f"WHERE diagnostic_id = {diagnostic_id} ORDER BY question_index, created_at"
             )
             photo_rows = cur.fetchall()
-            for question_idx, photo_url in photo_rows:
+            for row in photo_rows:
+                question_idx = row[0]
+                photo_url = row[1]
+                caption = row[2] if len(row) > 2 else None
                 if question_idx not in photos_by_question:
                     photos_by_question[question_idx] = []
-                photos_by_question[question_idx].append(photo_url)
+                photos_by_question[question_idx].append({'url': photo_url, 'caption': caption})
         
         defect_labels = {
             'chips': 'Сколы',
@@ -369,25 +372,40 @@ def handler(event: dict, context) -> dict:
             
             priemka_photos_by_q = {}
             cur.execute(
-                f"SELECT question_index, photo_url FROM {schema}.diagnostic_photos "
+                f"SELECT question_index, photo_url, caption FROM {schema}.diagnostic_photos "
                 f"WHERE diagnostic_id = {diagnostic_id} ORDER BY question_index, created_at"
             )
             priemka_photo_rows = cur.fetchall()
-            for q_idx, p_url in priemka_photo_rows:
+            for row in priemka_photo_rows:
+                q_idx = row[0]
+                p_url = row[1]
+                p_caption = row[2] if len(row) > 2 else None
                 if q_idx not in priemka_photos_by_q:
                     priemka_photos_by_q[q_idx] = []
-                priemka_photos_by_q[q_idx].append(p_url)
+                priemka_photos_by_q[q_idx].append({'url': p_url, 'caption': p_caption})
             
             for question_num, question_text, answer_value, sub_answers in checklist_rows:
                 block = []
                 block.append(Paragraph(f'<b>{question_text}</b>', item_style))
                 
-                if answer_value and answer_value not in ('Фото прикреплено',):
+                if answer_value and not answer_value.startswith('Фото прикреплено'):
                     block.append(Paragraph(f'  {answer_value}', item_style))
+                
+                caption_style = ParagraphStyle(
+                    'Caption',
+                    fontName=font_name,
+                    fontSize=9,
+                    alignment=TA_LEFT,
+                    spaceAfter=2,
+                    textColor=colors.HexColor('#555555'),
+                    leftIndent=10
+                )
                 
                 q_index = question_num - 1
                 if q_index in priemka_photos_by_q and answer_value not in ('Не предусмотрено', 'Доп. фото нет', 'Замечаний нет'):
-                    for photo_url in priemka_photos_by_q.pop(q_index):
+                    for photo_item in priemka_photos_by_q.pop(q_index):
+                        photo_url = photo_item['url']
+                        photo_caption = photo_item.get('caption')
                         try:
                             photo_resp = urllib.request.urlopen(photo_url)
                             photo_data = photo_resp.read()
@@ -399,6 +417,9 @@ def handler(event: dict, context) -> dict:
                             img = Image(BytesIO(photo_data), width=iw*scale, height=ih*scale)
                             block.append(Spacer(1, 2*mm))
                             block.append(img)
+                            if photo_caption:
+                                block.append(Spacer(1, 1*mm))
+                                block.append(Paragraph(f'<i>Комментарий: {photo_caption}</i>', caption_style))
                         except Exception as e:
                             print(f"[WARNING] Could not load priemka photo {photo_url}: {str(e)}")
                 
@@ -420,7 +441,9 @@ def handler(event: dict, context) -> dict:
                     
                     if with_photos and question_num in photos_by_question:
                         story.append(Spacer(1, 2*mm))
-                        for photo_url in photos_by_question[question_num]:
+                        for photo_item in photos_by_question[question_num]:
+                            photo_url = photo_item['url'] if isinstance(photo_item, dict) else photo_item
+                            photo_caption = photo_item.get('caption') if isinstance(photo_item, dict) else None
                             try:
                                 photo_response = urllib.request.urlopen(photo_url)
                                 photo_data = photo_response.read()
@@ -431,6 +454,9 @@ def handler(event: dict, context) -> dict:
                                 scale = min(max_w / iw, max_h / ih)
                                 img = Image(BytesIO(photo_data), width=iw*scale, height=ih*scale)
                                 story.append(img)
+                                if photo_caption:
+                                    cap_style = ParagraphStyle('PhotoCaption', fontName=font_name, fontSize=9, textColor=colors.HexColor('#555555'), leftIndent=10)
+                                    story.append(Paragraph(f'<i>Комментарий: {photo_caption}</i>', cap_style))
                                 story.append(Spacer(1, 2*mm))
                             except Exception as e:
                                 print(f"[WARNING] Could not load photo {photo_url}: {str(e)}")

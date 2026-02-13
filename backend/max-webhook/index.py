@@ -181,7 +181,7 @@ def handle_message(update: dict):
     # Обработка фото в режиме Приемки
     if session.get('step') == 6 and session.get('waiting_for_photo'):
         if attachments:
-            handle_priemka_photo(sender_id, session, attachments)
+            handle_priemka_photo(sender_id, session, attachments, user_text)
         else:
             response_text = '⚠️ Пожалуйста, прикрепите фото.'
             buttons = [[{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}]]
@@ -1405,7 +1405,7 @@ def send_priemka_question(sender_id: str, session: dict):
         send_message(sender_id, progress_text, buttons)
 
 
-def handle_priemka_photo(sender_id: str, session: dict, attachments: list):
+def handle_priemka_photo(sender_id: str, session: dict, attachments: list, caption: str = ''):
     '''Обработка фото в режиме Приемки'''
     try:
         photo_url = None
@@ -1450,17 +1450,18 @@ def handle_priemka_photo(sender_id: str, session: dict, attachments: list):
         try:
             cur = photo_conn.cursor()
             cur.execute(
-                f"INSERT INTO {schema}.diagnostic_photos (diagnostic_id, question_index, photo_url) "
-                f"VALUES (%s, %s, %s)",
-                (diagnostic_id, question_index, cdn_url)
+                f"INSERT INTO {schema}.diagnostic_photos (diagnostic_id, question_index, photo_url, caption) "
+                f"VALUES (%s, %s, %s, %s)",
+                (diagnostic_id, question_index, cdn_url, caption if caption else None)
             )
             photo_conn.commit()
             cur.close()
         finally:
             db_pool.putconn(photo_conn)
 
+        answer_text = f'Фото прикреплено. Комментарий: {caption}' if caption else 'Фото прикреплено'
         if question:
-            save_priemka_answer(diagnostic_id, question['id'], question['title'], 'Фото прикреплено', cdn_url)
+            save_priemka_answer(diagnostic_id, question['id'], question['title'], answer_text, cdn_url)
 
         session['waiting_for_photo'] = False
 

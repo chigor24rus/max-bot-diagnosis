@@ -1,0 +1,1 @@
+ALTER TABLE t_p70271656_max_bot_diagnosis.diagnostic_photos ADD COLUMN caption TEXT NULL;
