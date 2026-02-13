@@ -66,26 +66,12 @@ export const useCachedDiagnostics = () => {
     abortControllerRef.current = new AbortController();
 
     try {
-      const headers: HeadersInit = {
-        'Cache-Control': 'no-cache'
-      };
-
-      if (cacheRef.current?.etag && !forceRefresh) {
-        headers['If-None-Match'] = cacheRef.current.etag;
-      }
-
       const response = await fetch(
         'https://functions.poehali.dev/e76024e1-4735-4e57-bf5f-060276b574c8?limit=500',
         {
-          signal: abortControllerRef.current.signal,
-          headers
+          signal: abortControllerRef.current.signal
         }
       );
-
-      if (response.status === 304) {
-        setLoading(false);
-        return;
-      }
 
       if (!response.ok) throw new Error('Ошибка загрузки');
 
@@ -101,7 +87,7 @@ export const useCachedDiagnostics = () => {
       if (!loadFromCache()) {
         setError('Не удалось загрузить диагностики');
       }
-      console.error('Load error:', err);
+      console.error('Fetch error:', err.message || err, 'for', 'https://functions.poehali.dev/e76024e1-4735-4e57-bf5f-060276b574c8?limit=500');
     } finally {
       setLoading(false);
     }
