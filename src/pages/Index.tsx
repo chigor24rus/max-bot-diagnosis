@@ -109,7 +109,7 @@ const Index = () => {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <TabsList className="bg-slate-900/50 border-b border-slate-700 rounded-none w-full justify-start px-2 sm:px-4 shrink-0 overflow-x-auto">
             <TabsTrigger value="chat" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Icon name="MessageSquare" size={16} />
@@ -196,7 +196,7 @@ const Index = () => {
             <DiagnosticHistory />
           </TabsContent>
 
-          <TabsContent value="info" className="flex-1 m-0 p-0 data-[state=active]:block data-[state=inactive]:hidden overflow-y-auto">
+          <TabsContent value="info" className="flex-1 m-0 p-0 data-[state=active]:block data-[state=inactive]:hidden overflow-y-auto min-h-0">
             <BotInfo />
           </TabsContent>
         </Tabs>
