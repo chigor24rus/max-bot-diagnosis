@@ -386,9 +386,6 @@ def handler(event: dict, context) -> dict:
             story.append(NextPageTemplate('other_pages'))
             story.append(PageBreak())
             
-            story.append(Paragraph('Фотофиксация автомобиля', section_style))
-            story.append(Spacer(1, 4*mm))
-            
             priemka_photos_by_q = {}
             cur.execute(
                 f"SELECT question_index, photo_url, caption FROM {schema}.diagnostic_photos "
@@ -403,8 +400,13 @@ def handler(event: dict, context) -> dict:
                     priemka_photos_by_q[q_idx] = []
                 priemka_photos_by_q[q_idx].append({'url': p_url, 'caption': p_caption})
             
+            is_first_priemka_block = True
             for question_num, question_text, answer_value, sub_answers in checklist_rows:
                 block = []
+                if is_first_priemka_block:
+                    block.append(Paragraph('Фотофиксация автомобиля', section_style))
+                    block.append(Spacer(1, 4*mm))
+                    is_first_priemka_block = False
                 block.append(Paragraph(f'<b>{question_text}</b>', item_style))
                 
                 if answer_value and not answer_value.startswith('Фото прикреплено'):
