@@ -86,46 +86,46 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-4xl h-[90vh] flex flex-col bg-slate-950/90 border-primary/20 overflow-hidden">
-        <div className="bg-gradient-to-r from-primary to-accent p-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-              <Icon name="Bot" size={28} className="text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-2 sm:p-4">
+      <Card className="w-full max-w-4xl h-[100vh] sm:h-[95vh] lg:h-[90vh] flex flex-col bg-slate-950/90 border-primary/20 overflow-hidden">
+        <div className="bg-gradient-to-r from-primary to-accent p-3 sm:p-4 flex items-center justify-between gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm shrink-0">
+              <Icon name="Bot" size={24} className="text-white sm:w-7 sm:h-7" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">HEVSR Diagnostics Bot</h1>
-              <p className="text-sm text-white/80">Механик: {mechanic.name}</p>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-bold text-white truncate">HEVSR Diagnostics Bot</h1>
+              <p className="text-xs sm:text-sm text-white/80 truncate">Механик: {mechanic.name}</p>
             </div>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={handleLogout}
-            className="text-white hover:bg-white/10"
+            className="text-white hover:bg-white/10 shrink-0"
           >
-            <Icon name="LogOut" size={18} className="mr-2" />
-            Выйти
+            <Icon name="LogOut" size={18} className="sm:mr-2" />
+            <span className="hidden sm:inline">Выйти</span>
           </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="bg-slate-900/50 border-b border-slate-700 rounded-none w-full justify-start px-4 shrink-0">
-            <TabsTrigger value="chat" className="flex items-center gap-2">
+          <TabsList className="bg-slate-900/50 border-b border-slate-700 rounded-none w-full justify-start px-2 sm:px-4 shrink-0 overflow-x-auto">
+            <TabsTrigger value="chat" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Icon name="MessageSquare" size={16} />
-              Чат
+              <span className="hidden sm:inline">Чат</span>
             </TabsTrigger>
-            <TabsTrigger value="diagnostic" className="flex items-center gap-2">
+            <TabsTrigger value="diagnostic" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Icon name="Wrench" size={16} />
-              Диагностика
+              <span className="hidden xs:inline">Диагностика</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
+            <TabsTrigger value="history" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Icon name="History" size={16} />
-              История
+              <span className="hidden sm:inline">История</span>
             </TabsTrigger>
-            <TabsTrigger value="info" className="flex items-center gap-2">
+            <TabsTrigger value="info" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Icon name="Info" size={16} />
-              О боте
+              <span className="hidden sm:inline">О боте</span>
             </TabsTrigger>
           </TabsList>
 

@@ -162,9 +162,9 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
   if (step === 'mechanic') {
     return (
       <Card className="w-full max-w-2xl mx-auto bg-slate-800 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-slate-100">Выбор механика</CardTitle>
-          <CardDescription className="text-slate-400">Выберите механика для проведения приемки автомобиля</CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-slate-100 text-lg sm:text-xl">Выбор механика</CardTitle>
+          <CardDescription className="text-slate-400 text-sm">Выберите механика для проведения приемки автомобиля</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {loadingMechanics ? (
@@ -186,13 +186,14 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
               </div>
             </RadioGroup>
           )}
-          <div className="flex justify-between pt-4">
-            <Button variant="outline" onClick={onCancel}>
+          <div className="flex flex-col-reverse sm:flex-row justify-between gap-2 sm:gap-0 pt-4">
+            <Button variant="outline" onClick={onCancel} className="w-full sm:w-auto">
               Отмена
             </Button>
             <Button 
               onClick={() => setStep('carInfo')}
               disabled={!selectedMechanic}
+              className="w-full sm:w-auto"
             >
               Далее
             </Button>
@@ -205,11 +206,11 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
   if (step === 'carInfo') {
     return (
       <Card className="w-full max-w-2xl mx-auto bg-slate-800 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-slate-100">Информация об автомобиле</CardTitle>
-          <CardDescription className="text-slate-400">Введите данные автомобиля для приемки</CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-slate-100 text-lg sm:text-xl">Информация об автомобиле</CardTitle>
+          <CardDescription className="text-slate-400 text-sm">Введите данные автомобиля для приемки</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 sm:p-6">
           <div>
             <Label htmlFor="carNumber" className="text-slate-300">Госномер автомобиля</Label>
             <Input
@@ -231,13 +232,14 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
               className="bg-slate-900 border-slate-600 text-slate-100 mt-1"
             />
           </div>
-          <div className="flex justify-between pt-4">
-            <Button variant="outline" onClick={() => setStep('mechanic')}>
+          <div className="flex flex-col-reverse sm:flex-row justify-between gap-2 sm:gap-0 pt-4">
+            <Button variant="outline" onClick={() => setStep('mechanic')} className="w-full sm:w-auto">
               Назад
             </Button>
             <Button 
               onClick={() => setStep('diagnostic')}
               disabled={!carNumber || !mileage}
+              className="w-full sm:w-auto"
             >
               Начать приемку
             </Button>
@@ -256,16 +258,16 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
 
   return (
     <Card className="w-full max-w-2xl mx-auto bg-slate-800 border-slate-700">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-slate-100">{currentSection?.title}</CardTitle>
-            <CardDescription className="text-slate-400 mt-1">
+      <CardHeader className="p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-slate-100 text-base sm:text-xl truncate">{currentSection?.title}</CardTitle>
+            <CardDescription className="text-slate-400 mt-1 text-xs sm:text-sm truncate">
               {carNumber} • {mileage} км • {selectedMechanic?.name}
             </CardDescription>
           </div>
-          <Badge variant="outline" className="text-slate-300">
-            Вопрос {currentGlobalQuestionNumber} из {totalQuestions}
+          <Badge variant="outline" className="text-slate-300 text-xs sm:text-sm shrink-0">
+            {currentGlobalQuestionNumber}/{totalQuestions}
           </Badge>
         </div>
         <div className="flex items-center gap-2 mt-4">
@@ -278,9 +280,9 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
           <span className="text-sm text-slate-400">{answeredQuestions}/{totalQuestions}</span>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="bg-slate-900/50 rounded-lg p-6 border border-slate-700 space-y-4 min-h-[300px]">
-          <Label className="text-slate-100 block font-medium text-lg">{currentQuestion.text}</Label>
+      <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+        <div className="bg-slate-900/50 rounded-lg p-4 sm:p-6 border border-slate-700 space-y-3 sm:space-y-4 min-h-[250px] sm:min-h-[300px]">
+          <Label className="text-slate-100 block font-medium text-base sm:text-lg leading-snug">{currentQuestion.text}</Label>
           
           {currentQuestion.type === 'photo' && (
             <div className="space-y-4">
@@ -291,13 +293,13 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
               <Button
                 variant={currentAnswer ? "default" : "outline"}
                 size="lg"
-                className="w-full flex items-center justify-center gap-3 h-14 text-base"
+                className="w-full flex items-center justify-center gap-2 sm:gap-3 h-12 sm:h-14 text-sm sm:text-base"
                 onClick={() => {
                   toast({ title: 'Функция в разработке', description: 'Загрузка фото будет доступна позже' });
                   handleAnswer(currentQuestion.id, 'Фото прикреплено');
                 }}
               >
-                <Icon name="Camera" size={24} />
+                <Icon name="Camera" size={20} className="sm:w-6 sm:h-6" />
                 {currentAnswer ? 'Фото прикреплено ✓' : 'Прикрепить фото'}
               </Button>
             </div>
@@ -352,11 +354,12 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
           )}
         </div>
 
-        <div className="flex justify-between pt-4">
+        <div className="flex flex-col-reverse sm:flex-row justify-between gap-2 sm:gap-0 pt-4">
           <Button 
             variant="outline" 
             onClick={handleBack}
             disabled={currentSectionIndex === 0 && currentQuestionIndex === 0}
+            className="w-full sm:w-auto"
           >
             <Icon name="ChevronLeft" size={16} className="mr-1" />
             Назад
@@ -364,6 +367,7 @@ const DiagnosticPriemka = ({ onComplete, onCancel }: DiagnosticPriemkaProps) => 
           <Button 
             onClick={handleNext}
             disabled={!isCurrentQuestionComplete()}
+            className="w-full sm:w-auto"
           >
             {isLastQuestion ? 'Завершить' : 'Далее'}
             {!isLastQuestion && <Icon name="ChevronRight" size={16} className="ml-1" />}

@@ -189,14 +189,14 @@ const DiagnosticDHCH = ({ onComplete, onCancel }: DiagnosticDHCHProps) => {
   if (step === 'mechanic') {
     return (
       <Card className="bg-slate-950/90 border-primary/20">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <Icon name="Wrench" size={24} className="text-primary" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-white flex items-center gap-2 text-lg sm:text-xl">
+            <Icon name="Wrench" size={20} className="text-primary sm:w-6 sm:h-6" />
             Диагностика ДХЧ
           </CardTitle>
-          <CardDescription>Выберите механика</CardDescription>
+          <CardDescription className="text-sm">Выберите механика</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 sm:p-6">
           {loadingMechanics ? (
             <div className="text-center py-8">
               <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>

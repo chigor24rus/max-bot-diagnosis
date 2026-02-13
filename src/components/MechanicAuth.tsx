@@ -91,20 +91,20 @@ const MechanicAuth = ({ onAuthenticated }: MechanicAuthProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <Card className="w-full max-w-md bg-slate-950/90 border-primary/20">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="p-4 bg-primary/10 rounded-full">
-              <Icon name="Lock" size={48} className="text-primary" />
+        <CardHeader className="text-center p-4 sm:p-6">
+          <div className="flex justify-center mb-3 sm:mb-4">
+            <div className="p-3 sm:p-4 bg-primary/10 rounded-full">
+              <Icon name="Lock" size={40} className="text-primary sm:w-12 sm:h-12" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-white">Авторизация</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-xl sm:text-2xl text-white">Авторизация</CardTitle>
+          <CardDescription className="text-slate-400 text-sm">
             HEVSR Diagnostics — вход для механиков
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-slate-300">
