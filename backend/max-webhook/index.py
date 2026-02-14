@@ -175,6 +175,16 @@ def handle_message(update: dict):
     
     session = get_session(str(sender_id))
     
+    lower_text = user_text.lower()
+    if lower_text in ['/cancel', 'отмена', '/отмена'] and session.get('step', 0) > 1:
+        mechanic_id = session.get('mechanic_id')
+        mechanic_name = session.get('mechanic', '')
+        session = {'step': 2, 'mechanic_id': mechanic_id, 'mechanic': mechanic_name}
+        save_session(str(sender_id), session)
+        response_text = f'❌ Диагностика отменена.\n\n{mechanic_name}, введите госномер автомобиля для новой диагностики.\n\nНапример: A159BK124'
+        send_message(sender_id, response_text)
+        return
+    
     # Обработка контакта для авторизации
     if session.get('step') == 1 and attachments:
         for attachment in attachments:
@@ -220,8 +230,6 @@ def handle_message(update: dict):
             send_message(sender_id, response_text)
         return
     
-    lower_text = user_text.lower()
-    
     # Команды
     if lower_text in ['/start', 'начать', 'старт']:
         # Проверяем, авторизован ли пользователь (проверка mechanic_id вместо user_id)
@@ -246,10 +254,10 @@ def handle_message(update: dict):
         response_text = '''📋 Доступные команды:
 
 /start - Начать новую диагностику
-/cancel - Отменить текущую операцию
+/cancel (или "отмена") - Отменить текущую диагностику
 /help - Показать помощь
 
-Бот проведёт вас через все этапы диагностики!'''
+Команду отмены можно ввести на любом этапе диагностики.'''
         send_message(sender_id, response_text)
         return
     
