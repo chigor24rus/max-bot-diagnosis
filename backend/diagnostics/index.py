@@ -113,6 +113,7 @@ def handler(event: dict, context) -> dict:
                     'isBase64Encoded': False
                 }
             
+            cur.execute(f"DELETE FROM {schema}.checklist_answers WHERE diagnostic_id = {diagnostic_id}")
             cur.execute(f"DELETE FROM {schema}.diagnostics WHERE id = {diagnostic_id}")
             conn.commit()
             
