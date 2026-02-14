@@ -18,6 +18,7 @@ type CleanupResult = {
   orphanFiles: number;
   orphanSize: number;
   orphanSizeFormatted: string;
+  orphanDbRecords: number;
   deletedFiles: number;
   keptFiles: number;
   keptSizeFormatted: string;
@@ -64,7 +65,7 @@ const StorageInfo = () => {
       if (response.ok) {
         const result: CleanupResult = await response.json();
         setScanResult(result);
-        if (result.orphanFiles === 0) {
+        if (result.orphanFiles === 0 && result.orphanDbRecords === 0) {
           toast({ title: 'Всё чисто', description: 'Ненужных файлов не найдено' });
         }
       }
@@ -195,14 +196,16 @@ const StorageInfo = () => {
               </div>
             </div>
 
-            {scanResult && scanResult.orphanFiles > 0 && (
+            {scanResult && (scanResult.orphanFiles > 0 || scanResult.orphanDbRecords > 0) && (
               <div className="bg-amber-950/30 border border-amber-700/40 rounded-lg p-3 space-y-3">
                 <div className="flex items-center gap-2 text-amber-400 text-sm font-medium">
                   <Icon name="AlertTriangle" size={16} />
-                  Найдено {scanResult.orphanFiles} ненужных файлов ({scanResult.orphanSizeFormatted})
+                  {scanResult.orphanFiles > 0
+                    ? `Найдено ${scanResult.orphanFiles} ненужных файлов (${scanResult.orphanSizeFormatted})`
+                    : `Найдено ${scanResult.orphanDbRecords} осиротевших записей в БД`}
                 </div>
                 <p className="text-xs text-slate-400">
-                  Это файлы от удалённых диагностик, которые остались в хранилище.
+                  Остатки от удалённых диагностик.
                 </p>
                 <Button
                   size="sm"
