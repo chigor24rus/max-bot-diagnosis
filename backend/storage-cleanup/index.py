@@ -2,7 +2,6 @@ import json
 import os
 import boto3
 import psycopg2
-from datetime import datetime, timedelta
 
 
 def handler(event: dict, context) -> dict:
@@ -83,35 +82,6 @@ def handler(event: dict, context) -> dict:
                     orphan_keys.append(key)
                     orphan_size += size
                     print(f"[cleanup] ORPHAN report from DB: {key} ({size} bytes)")
-
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=60)
-    
-    scan_limit = min(len(deleted_ids), 5)
-    scanned_count = 0
-    for diag_id in sorted(deleted_ids, reverse=True):
-        if scanned_count >= scan_limit:
-            break
-        print(f"[cleanup] Checking reports for deleted diagnostic {diag_id} (date range scan)")
-        current_date = start_date
-        found_count = 0
-        while current_date <= end_date and found_count < 3:
-            date_str = current_date.strftime('%Y%m%d')
-            for hour in range(0, 24, 12):
-                for minute in [0, 30]:
-                    time_str = f"{hour:02d}{minute:02d}"
-                    for suffix in ['', '_with_photos']:
-                        for second in [0, 30]:
-                            key = f"reports/diagnostic_{diag_id}{suffix}_{date_str}_{time_str}{second:02d}.pdf"
-                            size = _check_s3_key(s3, key)
-                            if size is not None:
-                                if key not in orphan_keys:
-                                    orphan_keys.append(key)
-                                    orphan_size += size
-                                    found_count += 1
-                                    print(f"[cleanup] ORPHAN report by scan: {key} ({size} bytes)")
-            current_date += timedelta(days=1)
-        scanned_count += 1
 
     print(f"[cleanup] Total orphan files: {len(orphan_keys)}, size: {orphan_size}")
 
