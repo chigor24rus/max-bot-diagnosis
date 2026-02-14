@@ -5,7 +5,7 @@ import psycopg2
 
 
 def handler(event: dict, context) -> dict:
-    '''Очистка хранилища S3 от осиротевших файлов (не привязанных к существующим диагностикам)'''
+    '''Очистка хранилища от осиротевших файлов и записей БД'''
 
     if event.get('httpMethod') == 'OPTIONS':
         return {
@@ -32,6 +32,8 @@ def handler(event: dict, context) -> dict:
 
     db_url = os.environ.get('DATABASE_URL')
     schema = os.environ.get('MAIN_DB_SCHEMA')
+    aws_key = os.environ.get('AWS_ACCESS_KEY_ID')
+    cdn_prefix = f"https://cdn.poehali.dev/projects/{aws_key}/bucket/"
 
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
@@ -45,66 +47,55 @@ def handler(event: dict, context) -> dict:
         aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
     )
 
-    orphan_keys = []
+    cur.execute(
+        f"SELECT id, photo_url, diagnostic_id FROM {schema}.diagnostic_photos "
+        f"WHERE diagnostic_id NOT IN (SELECT id FROM {schema}.diagnostics)"
+    )
+    orphan_photos = cur.fetchall()
+
+    orphan_s3_keys = []
     orphan_size = 0
-    kept_keys = 0
-    kept_size = 0
+    for row in orphan_photos:
+        url = row[1]
+        if url and url.startswith(cdn_prefix):
+            s3_key = url[len(cdn_prefix):]
+            orphan_s3_keys.append(s3_key)
+            try:
+                resp = s3.head_object(Bucket='files', Key=s3_key)
+                orphan_size += resp.get('ContentLength', 0)
+            except Exception:
+                pass
 
-    continuation_token = None
-    while True:
-        params = {'Bucket': 'files', 'MaxKeys': 1000}
-        if continuation_token:
-            params['ContinuationToken'] = continuation_token
+    cur.execute(f"SELECT DISTINCT diagnostic_id FROM {schema}.diagnostic_photos WHERE diagnostic_id NOT IN (SELECT id FROM {schema}.diagnostics)")
+    orphan_photo_diag_ids = set(row[0] for row in cur.fetchall())
 
-        response = s3.list_objects_v2(**params)
+    cur.execute(f"SELECT DISTINCT diagnostic_id FROM {schema}.checklist_answers WHERE diagnostic_id NOT IN (SELECT id FROM {schema}.diagnostics)")
+    orphan_answer_diag_ids = set(row[0] for row in cur.fetchall())
 
-        for obj in response.get('Contents', []):
-            key = obj['Key']
-            size = obj['Size']
-            diag_id = extract_diagnostic_id(key)
+    orphan_db_records = len(orphan_photo_diag_ids) + len(orphan_answer_diag_ids)
 
-            if diag_id is not None and diag_id not in existing_ids:
-                orphan_keys.append(key)
-                orphan_size += size
-            else:
-                kept_keys += 1
-                kept_size += size
-
-        if response.get('IsTruncated'):
-            continuation_token = response.get('NextContinuationToken')
-        else:
-            break
-
-    cur.execute(f"SELECT DISTINCT diagnostic_id FROM {schema}.diagnostic_photos")
-    photo_diag_ids = set(row[0] for row in cur.fetchall())
-    orphan_photo_ids = photo_diag_ids - existing_ids
-    orphan_db_records = len(orphan_photo_ids)
-
-    cur.execute(f"SELECT DISTINCT diagnostic_id FROM {schema}.checklist_answers")
-    answer_diag_ids = set(row[0] for row in cur.fetchall())
-    orphan_answer_ids = answer_diag_ids - existing_ids
+    deleted_files = 0
+    deleted_db = 0
 
     if not dry_run:
-        deleted_count = 0
-        if orphan_keys:
-            batch_size = 1000
-            for i in range(0, len(orphan_keys), batch_size):
-                batch = orphan_keys[i:i + batch_size]
-                delete_objects = [{'Key': k} for k in batch]
-                s3.delete_objects(Bucket='files', Delete={'Objects': delete_objects})
-                deleted_count += len(batch)
+        for s3_key in orphan_s3_keys:
+            try:
+                s3.delete_object(Bucket='files', Key=s3_key)
+                deleted_files += 1
+            except Exception:
+                pass
 
-        if orphan_photo_ids:
-            ids_str = ','.join(str(i) for i in orphan_photo_ids)
+        if orphan_photo_diag_ids:
+            ids_str = ','.join(str(i) for i in orphan_photo_diag_ids)
             cur.execute(f"DELETE FROM {schema}.diagnostic_photos WHERE diagnostic_id IN ({ids_str})")
+            deleted_db += cur.rowcount
 
-        if orphan_answer_ids:
-            ids_str = ','.join(str(i) for i in orphan_answer_ids)
+        if orphan_answer_diag_ids:
+            ids_str = ','.join(str(i) for i in orphan_answer_diag_ids)
             cur.execute(f"DELETE FROM {schema}.checklist_answers WHERE diagnostic_id IN ({ids_str})")
+            deleted_db += cur.rowcount
 
         conn.commit()
-    else:
-        deleted_count = 0
 
     cur.close()
     conn.close()
@@ -127,38 +118,12 @@ def handler(event: dict, context) -> dict:
         },
         'body': json.dumps({
             'dryRun': dry_run,
-            'orphanFiles': len(orphan_keys),
+            'orphanFiles': len(orphan_s3_keys),
             'orphanSize': orphan_size,
             'orphanSizeFormatted': format_size(orphan_size),
             'orphanDbRecords': orphan_db_records,
-            'deletedFiles': deleted_count,
-            'keptFiles': kept_keys,
-            'keptSize': kept_size,
-            'keptSizeFormatted': format_size(kept_size)
+            'deletedFiles': deleted_files,
+            'deletedDbRecords': deleted_db
         }),
         'isBase64Encoded': False
     }
-
-
-def extract_diagnostic_id(key):
-    if key.startswith('diagnostics/'):
-        parts = key.split('/')
-        if len(parts) >= 2:
-            try:
-                return int(parts[1])
-            except (ValueError, IndexError):
-                pass
-
-    if key.startswith('reports/diagnostic_'):
-        name = key.split('/')[-1]
-        name = name.replace('diagnostic_', '')
-        idx = name.find('_')
-        if idx == -1:
-            idx = name.find('.')
-        if idx > 0:
-            try:
-                return int(name[:idx])
-            except ValueError:
-                pass
-
-    return None

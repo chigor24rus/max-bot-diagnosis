@@ -20,8 +20,7 @@ type CleanupResult = {
   orphanSizeFormatted: string;
   orphanDbRecords: number;
   deletedFiles: number;
-  keptFiles: number;
-  keptSizeFormatted: string;
+  deletedDbRecords: number;
 };
 
 const STORAGE_URL = 'https://functions.poehali.dev/e1bacd58-95dc-4051-ae23-ee4fefa08c66';
@@ -78,7 +77,10 @@ const StorageInfo = () => {
   };
 
   const performCleanup = async () => {
-    if (!confirm(`Удалить ${scanResult?.orphanFiles} ненужных файлов (${scanResult?.orphanSizeFormatted})? Это действие необратимо.`)) {
+    const parts = [];
+    if (scanResult?.orphanFiles) parts.push(`${scanResult.orphanFiles} файлов (${scanResult.orphanSizeFormatted})`);
+    if (scanResult?.orphanDbRecords) parts.push(`${scanResult.orphanDbRecords} записей в БД`);
+    if (!confirm(`Удалить ${parts.join(' и ')}? Это действие необратимо.`)) {
       return;
     }
     setCleaning(true);
@@ -90,9 +92,12 @@ const StorageInfo = () => {
       });
       if (response.ok) {
         const result: CleanupResult = await response.json();
+        const msgs = [];
+        if (result.deletedFiles) msgs.push(`${result.deletedFiles} файлов`);
+        if (result.deletedDbRecords) msgs.push(`${result.deletedDbRecords} записей БД`);
         toast({
           title: 'Очистка завершена',
-          description: `Удалено ${result.deletedFiles} файлов`
+          description: msgs.length ? `Удалено: ${msgs.join(', ')}` : 'Нечего удалять'
         });
         setScanResult(null);
         loadData();

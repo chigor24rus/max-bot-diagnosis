@@ -1,10 +1,11 @@
 import json
 import os
 import boto3
+import psycopg2
 
 
 def handler(event: dict, context) -> dict:
-    '''Получение информации о состоянии S3 хранилища (размер, количество файлов)'''
+    '''Получение информации о состоянии S3 хранилища через БД + проверку S3'''
 
     if event.get('httpMethod') == 'OPTIONS':
         return {
@@ -18,49 +19,62 @@ def handler(event: dict, context) -> dict:
             'isBase64Encoded': False
         }
 
+    db_url = os.environ.get('DATABASE_URL')
+    schema = os.environ.get('MAIN_DB_SCHEMA')
+    aws_key = os.environ.get('AWS_ACCESS_KEY_ID')
+    cdn_prefix = f"https://cdn.poehali.dev/projects/{aws_key}/bucket/"
+
+    conn = psycopg2.connect(db_url)
+    cur = conn.cursor()
+
     s3 = boto3.client('s3',
         endpoint_url='https://bucket.poehali.dev',
         aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
         aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
     )
 
-    total_size = 0
-    total_files = 0
-    photos_size = 0
+    cur.execute(f"SELECT photo_url FROM {schema}.diagnostic_photos")
+    photo_rows = cur.fetchall()
+
     photos_count = 0
-    reports_size = 0
-    reports_count = 0
-    other_size = 0
-    other_count = 0
-
-    continuation_token = None
-    while True:
-        params = {'Bucket': 'files', 'MaxKeys': 1000}
-        if continuation_token:
-            params['ContinuationToken'] = continuation_token
-
-        response = s3.list_objects_v2(**params)
-
-        for obj in response.get('Contents', []):
-            key = obj['Key']
-            size = obj['Size']
-            total_size += size
-            total_files += 1
-
-            if key.startswith('diagnostics/'):
-                photos_size += size
+    photos_size = 0
+    for row in photo_rows:
+        url = row[0]
+        if url and url.startswith(cdn_prefix):
+            s3_key = url[len(cdn_prefix):]
+            try:
+                resp = s3.head_object(Bucket='files', Key=s3_key)
+                photos_size += resp.get('ContentLength', 0)
                 photos_count += 1
-            elif key.startswith('reports/'):
-                reports_size += size
-                reports_count += 1
-            else:
-                other_size += size
-                other_count += 1
+            except Exception:
+                pass
 
-        if response.get('IsTruncated'):
-            continuation_token = response.get('NextContinuationToken')
-        else:
-            break
+    cur.execute(
+        f"SELECT DISTINCT d.id FROM {schema}.diagnostics d "
+        f"JOIN {schema}.checklist_answers ca ON ca.diagnostic_id = d.id"
+    )
+    diag_ids = [row[0] for row in cur.fetchall()]
+
+    reports_count = 0
+    reports_size = 0
+    for diag_id in diag_ids:
+        for suffix in ['', '_photos']:
+            key = f"reports/diagnostic_{diag_id}{suffix}.pdf"
+            try:
+                resp = s3.head_object(Bucket='files', Key=key)
+                reports_size += resp.get('ContentLength', 0)
+                reports_count += 1
+            except Exception:
+                pass
+
+    cur.execute(f"SELECT COUNT(*) FROM {schema}.diagnostic_photos WHERE diagnostic_id NOT IN (SELECT id FROM {schema}.diagnostics)")
+    orphan_photo_count = cur.fetchone()[0]
+
+    cur.close()
+    conn.close()
+
+    total_size = photos_size + reports_size
+    total_files = photos_count + reports_count
 
     def format_size(bytes_val):
         if bytes_val < 1024:
@@ -82,6 +96,7 @@ def handler(event: dict, context) -> dict:
             'totalSize': total_size,
             'totalSizeFormatted': format_size(total_size),
             'totalFiles': total_files,
+            'orphanDbRecords': orphan_photo_count,
             'photos': {
                 'size': photos_size,
                 'sizeFormatted': format_size(photos_size),
@@ -93,9 +108,9 @@ def handler(event: dict, context) -> dict:
                 'count': reports_count
             },
             'other': {
-                'size': other_size,
-                'sizeFormatted': format_size(other_size),
-                'count': other_count
+                'size': 0,
+                'sizeFormatted': '0 Б',
+                'count': 0
             }
         }),
         'isBase64Encoded': False
