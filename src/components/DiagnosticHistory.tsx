@@ -27,7 +27,7 @@ const DiagnosticHistory = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMechanic, setSelectedMechanic] = useState<string>('');
-  const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
+  const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
 
   useEffect(() => {
     loadDiagnostics();
@@ -55,16 +55,18 @@ const DiagnosticHistory = () => {
     }
   };
 
-  const handleGenerateReport = async (id: number) => {
-    setGeneratingPdfId(id);
+  const handleGenerateReport = async (id: number, withPhotos: boolean = false) => {
+    const key = `${id}-${withPhotos ? 'photo' : 'no'}`;
+    setGeneratingPdfId(key);
     try {
-      console.log('[PDF] Запрос генерации PDF для диагностики:', id);
-      const response = await fetch(`https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6?id=${id}`);
-      console.log('[PDF] Статус ответа:', response.status);
+      let url = `https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6?id=${id}`;
+      if (withPhotos) {
+        url += '&with_photos=true';
+      }
+      const response = await fetch(url);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[PDF] Ошибка ответа:', errorText);
         let errorData;
         try {
           errorData = JSON.parse(errorText);
@@ -75,7 +77,6 @@ const DiagnosticHistory = () => {
       }
       
       const data = await response.json();
-      console.log('[PDF] Данные ответа:', data);
       
       if (!data.pdfUrl) {
         throw new Error('URL PDF не получен');
@@ -98,7 +99,6 @@ const DiagnosticHistory = () => {
         description: 'PDF отчёт открыт в новой вкладке'
       });
     } catch (error) {
-      console.error('[PDF] Критическая ошибка:', error);
       toast({
         title: 'Ошибка',
         description: error instanceof Error ? error.message : 'Не удалось создать отчёт',
@@ -235,25 +235,70 @@ const DiagnosticHistory = () => {
                     </div>
                   </div>
                   
-                  <Button
-                    onClick={() => handleGenerateReport(diagnostic.id)}
-                    variant="outline"
-                    size="sm"
-                    disabled={generatingPdfId === diagnostic.id}
-                    className="bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary hover:text-primary disabled:opacity-50"
-                  >
-                    {generatingPdfId === diagnostic.id ? (
+                  <div className="flex gap-2">
+                    {diagnostic.diagnosticType === '5min' ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
-                        Генерация...
+                        <Button
+                          onClick={() => handleGenerateReport(diagnostic.id, false)}
+                          variant="outline"
+                          size="sm"
+                          disabled={generatingPdfId !== null}
+                          className="bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary hover:text-primary disabled:opacity-50"
+                        >
+                          {generatingPdfId === `${diagnostic.id}-no` ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                              ...
+                            </>
+                          ) : (
+                            <>
+                              <Icon name="FileText" size={16} className="mr-2" />
+                              PDF
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => handleGenerateReport(diagnostic.id, true)}
+                          variant="outline"
+                          size="sm"
+                          disabled={generatingPdfId !== null}
+                          className="bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary hover:text-primary disabled:opacity-50"
+                        >
+                          {generatingPdfId === `${diagnostic.id}-photo` ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                              ...
+                            </>
+                          ) : (
+                            <>
+                              <Icon name="Image" size={16} className="mr-2" />
+                              PDF + Фото
+                            </>
+                          )}
+                        </Button>
                       </>
                     ) : (
-                      <>
-                        <Icon name="FileText" size={16} className="mr-2" />
-                        PDF
-                      </>
+                      <Button
+                        onClick={() => handleGenerateReport(diagnostic.id, true)}
+                        variant="outline"
+                        size="sm"
+                        disabled={generatingPdfId !== null}
+                        className="bg-primary/10 hover:bg-primary/20 border-primary/30 text-primary hover:text-primary disabled:opacity-50"
+                      >
+                        {generatingPdfId === `${diagnostic.id}-photo` ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mr-2" />
+                            Генерация...
+                          </>
+                        ) : (
+                          <>
+                            <Icon name="FileText" size={16} className="mr-2" />
+                            PDF
+                          </>
+                        )}
+                      </Button>
                     )}
-                  </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
