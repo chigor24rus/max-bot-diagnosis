@@ -1,11 +1,12 @@
 import json
 import os
+import re
 import boto3
 import psycopg2
 
 
 def handler(event: dict, context) -> dict:
-    '''Очистка хранилища от осиротевших файлов и записей БД'''
+    '''Полная очистка хранилища: удаляет файлы и записи БД от несуществующих диагностик'''
 
     if event.get('httpMethod') == 'OPTIONS':
         return {
@@ -32,8 +33,6 @@ def handler(event: dict, context) -> dict:
 
     db_url = os.environ.get('DATABASE_URL')
     schema = os.environ.get('MAIN_DB_SCHEMA')
-    aws_key = os.environ.get('AWS_ACCESS_KEY_ID')
-    cdn_prefix = f"https://cdn.poehali.dev/projects/{aws_key}/bucket/"
 
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
@@ -47,29 +46,31 @@ def handler(event: dict, context) -> dict:
         aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
     )
 
+    orphan_keys = []
+    orphan_size = 0
+
+    paginator = s3.get_paginator('list_objects_v2')
+    for prefix in ['diagnostics/', 'reports/']:
+        for page in paginator.paginate(Bucket='files', Prefix=prefix):
+            for obj in page.get('Contents', []):
+                key = obj['Key']
+                size = obj.get('Size', 0)
+
+                diag_id = _extract_diagnostic_id(key, prefix)
+                if diag_id is not None and diag_id not in existing_ids:
+                    orphan_keys.append(key)
+                    orphan_size += size
+
     cur.execute(
-        f"SELECT id, photo_url, diagnostic_id FROM {schema}.diagnostic_photos "
+        f"SELECT DISTINCT diagnostic_id FROM {schema}.diagnostic_photos "
         f"WHERE diagnostic_id NOT IN (SELECT id FROM {schema}.diagnostics)"
     )
-    orphan_photos = cur.fetchall()
-
-    orphan_s3_keys = []
-    orphan_size = 0
-    for row in orphan_photos:
-        url = row[1]
-        if url and url.startswith(cdn_prefix):
-            s3_key = url[len(cdn_prefix):]
-            orphan_s3_keys.append(s3_key)
-            try:
-                resp = s3.head_object(Bucket='files', Key=s3_key)
-                orphan_size += resp.get('ContentLength', 0)
-            except Exception:
-                pass
-
-    cur.execute(f"SELECT DISTINCT diagnostic_id FROM {schema}.diagnostic_photos WHERE diagnostic_id NOT IN (SELECT id FROM {schema}.diagnostics)")
     orphan_photo_diag_ids = set(row[0] for row in cur.fetchall())
 
-    cur.execute(f"SELECT DISTINCT diagnostic_id FROM {schema}.checklist_answers WHERE diagnostic_id NOT IN (SELECT id FROM {schema}.diagnostics)")
+    cur.execute(
+        f"SELECT DISTINCT diagnostic_id FROM {schema}.checklist_answers "
+        f"WHERE diagnostic_id NOT IN (SELECT id FROM {schema}.diagnostics)"
+    )
     orphan_answer_diag_ids = set(row[0] for row in cur.fetchall())
 
     orphan_db_records = len(orphan_photo_diag_ids) + len(orphan_answer_diag_ids)
@@ -78,9 +79,9 @@ def handler(event: dict, context) -> dict:
     deleted_db = 0
 
     if not dry_run:
-        for s3_key in orphan_s3_keys:
+        for key in orphan_keys:
             try:
-                s3.delete_object(Bucket='files', Key=s3_key)
+                s3.delete_object(Bucket='files', Key=key)
                 deleted_files += 1
             except Exception:
                 pass
@@ -100,16 +101,6 @@ def handler(event: dict, context) -> dict:
     cur.close()
     conn.close()
 
-    def format_size(bytes_val):
-        if bytes_val < 1024:
-            return f"{bytes_val} Б"
-        elif bytes_val < 1024 * 1024:
-            return f"{bytes_val / 1024:.1f} КБ"
-        elif bytes_val < 1024 * 1024 * 1024:
-            return f"{bytes_val / (1024 * 1024):.1f} МБ"
-        else:
-            return f"{bytes_val / (1024 * 1024 * 1024):.2f} ГБ"
-
     return {
         'statusCode': 200,
         'headers': {
@@ -118,12 +109,41 @@ def handler(event: dict, context) -> dict:
         },
         'body': json.dumps({
             'dryRun': dry_run,
-            'orphanFiles': len(orphan_s3_keys),
+            'orphanFiles': len(orphan_keys),
             'orphanSize': orphan_size,
-            'orphanSizeFormatted': format_size(orphan_size),
+            'orphanSizeFormatted': _format_size(orphan_size),
             'orphanDbRecords': orphan_db_records,
             'deletedFiles': deleted_files,
             'deletedDbRecords': deleted_db
         }),
         'isBase64Encoded': False
     }
+
+
+def _extract_diagnostic_id(key, prefix):
+    if prefix == 'diagnostics/':
+        parts = key.split('/')
+        if len(parts) >= 2:
+            try:
+                return int(parts[1])
+            except (ValueError, IndexError):
+                return None
+    elif prefix == 'reports/':
+        m = re.search(r'diagnostic_(\d+)', key)
+        if m:
+            try:
+                return int(m.group(1))
+            except ValueError:
+                return None
+    return None
+
+
+def _format_size(bytes_val):
+    if bytes_val < 1024:
+        return f"{bytes_val} Б"
+    elif bytes_val < 1024 * 1024:
+        return f"{bytes_val / 1024:.1f} КБ"
+    elif bytes_val < 1024 * 1024 * 1024:
+        return f"{bytes_val / (1024 * 1024):.1f} МБ"
+    else:
+        return f"{bytes_val / (1024 * 1024 * 1024):.2f} ГБ"
