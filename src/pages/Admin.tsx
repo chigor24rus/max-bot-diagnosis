@@ -71,7 +71,9 @@ const Admin = () => {
         <AdminHeader onLogout={handleLogout} />
         <WebhookManager webhookUrl={webhookUrl} setupUrl={setupUrl} />
         <MechanicsManager />
-        <StorageInfo />
+        <AdminErrorBoundary>
+          <StorageInfo />
+        </AdminErrorBoundary>
         <AdminErrorBoundary>
           <DiagnosticsManager 
             diagnostics={diagnostics} 

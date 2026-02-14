@@ -9,10 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 
 const diagnosticTypeLabels: Record<string, string> = {
-  'priemka': 'Приемка',
+  priemka: 'Приемка',
   '5min': '5-ти минутка',
-  'dhch': 'ДХЧ',
-  'des': 'ДЭС'
+  dhch: 'ДХЧ',
+  des: 'ДЭС',
 };
 
 interface DiagnosticsManagerProps {
