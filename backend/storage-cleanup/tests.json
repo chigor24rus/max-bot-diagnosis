@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "Dry run cleanup",
+      "method": "POST",
+      "path": "/",
+      "body": {"dryRun": true},
+      "expectedStatus": 200,
+      "expectedBody": {
+        "dryRun": true,
+        "orphanSizeFormatted": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
