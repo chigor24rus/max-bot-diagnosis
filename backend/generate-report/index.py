@@ -214,6 +214,7 @@ def handler(event: dict, context) -> dict:
             'coolant': 'Течь антифриза',
             'dirty': 'Загрязнен',
             'moisture': 'Попадание влаги',
+            'other_photo': 'Другое (см. фото)',
         }
         
         def parse_defects(sub_answers):

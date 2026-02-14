@@ -130,6 +130,7 @@ export const checklistQuestions: ChecklistQuestion[] = [
           { value: 'abs', label: 'ABS' },
           { value: 'battery', label: 'АКБ' },
           { value: 'hybrid', label: 'Hybrid System / IMA' },
+          { value: 'other_photo', label: 'Другое (см. фото)' },
         ],
       },
       { value: 'other', label: 'Иное (указать текстом)', requiresText: true },
