@@ -238,7 +238,8 @@ def handle_message(update: dict):
             session['step'] = 2
             save_session(str(sender_id), session)
             response_text = f'👋 С возвращением, {session.get("mechanic", "")}!\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
-            send_message(sender_id, response_text)
+            buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+            send_message(sender_id, response_text, buttons)
         else:
             # Не авторизован - запрашиваем телефон
             session = {'step': 1}
@@ -292,7 +293,8 @@ def handle_message(update: dict):
             session['step'] = 3
             save_session(str(sender_id), session)
             response_text = f'✅ Госномер {clean_number} принят!\n\nТеперь введите пробег автомобиля (в км).\n\nНапример: 150000'
-            send_message(sender_id, response_text)
+            buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+            send_message(sender_id, response_text, buttons)
         else:
             response_text = '⚠️ Госномер слишком короткий.\n\nВведите корректный госномер (минимум 5 символов).\n\nНапример: A159BK124'
             send_message(sender_id, response_text)
@@ -309,7 +311,8 @@ def handle_message(update: dict):
                 [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
                 [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
                 [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
-                [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}]
+                [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}],
+                [{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]
             ]
             send_message(sender_id, response_text, buttons)
         else:
@@ -342,7 +345,8 @@ def handle_callback(update: dict):
             session['step'] = 2
             save_session(str(sender_id), session)
             response_text = f'👋 Отлично! Введите госномер автомобиля.\n\nНапример: A159BK124'
-            send_message(sender_id, response_text)
+            buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+            send_message(sender_id, response_text, buttons)
         else:
             # Не авторизован - запрашиваем телефон
             session = {'step': 1}
@@ -400,6 +404,14 @@ def handle_callback(update: dict):
             ]
             send_message(sender_id, response_text, buttons)
     
+    elif payload == 'cancel_diagnostic':
+        mechanic_id = session.get('mechanic_id')
+        mechanic_name = session.get('mechanic', '')
+        session = {'step': 2, 'mechanic_id': mechanic_id, 'mechanic': mechanic_name, 'user_id': session.get('user_id'), 'user_name': session.get('user_name'), 'phone': session.get('phone')}
+        save_session(str(sender_id), session)
+        response_text = f'❌ Диагностика отменена.\n\n{mechanic_name}, введите госномер автомобиля для новой диагностики.\n\nНапример: A159BK124'
+        send_message(sender_id, response_text)
+
     elif payload == 'back_to_type':
         session['step'] = 4
         session.pop('diagnostic_type', None)
@@ -409,7 +421,8 @@ def handle_callback(update: dict):
             [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
             [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
             [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
-            [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}]
+            [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}],
+            [{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]
         ]
         send_message(sender_id, response_text, buttons)
     
@@ -614,7 +627,8 @@ def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
         save_session(str(sender_id), session)
         
         response_text = f'✅ Добро пожаловать, {mechanic_name}!\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
-        send_message(sender_id, response_text)
+        buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+        send_message(sender_id, response_text, buttons)
         
     except Exception as e:
         print(f"[ERROR] Phone auth failed: {str(e)}")
@@ -705,9 +719,11 @@ def send_checklist_question(sender_id: str, session: dict):
             'payload': f"answer:{question['id']}:{option['value']}"
         }])
     
-    # Кнопка "Назад" (если это не первый вопрос)
+    nav_buttons = []
     if question_index > 0:
-        buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'previous_question'}])
+        nav_buttons.append({'type': 'callback', 'text': '⬅️ Назад', 'payload': 'previous_question'})
+    nav_buttons.append({'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'})
+    buttons.append(nav_buttons)
     
     send_message(sender_id, response_text, buttons)
 
@@ -772,14 +788,11 @@ def send_sub_question(sender_id: str, session: dict):
             'payload': f"sub_answer_done:{question['id']}"
         }])
     
-    # Кнопка «Назад»
-    buttons.append([{
-        'type': 'callback',
-        'text': '⬅️ Назад',
-        'payload': 'cancel_sub_question'
-    }])
+    buttons.append([
+        {'type': 'callback', 'text': '⬅️ Назад', 'payload': 'cancel_sub_question'},
+        {'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}
+    ])
     
-    # Отправляем сообщение (MAX API не поддерживает редактирование inline-клавиатур)
     send_message(sender_id, response_text, buttons)
 
 
@@ -801,12 +814,10 @@ def send_nested_sub_question(sender_id: str, session: dict, parent_option: dict,
             'payload': f"nested_sub_answer:{question['id']}:{parent_value}:{nested_opt['value']}"
         }])
     
-    # Кнопка «Назад» к выбору подпунктов — передаём parent_value для удаления
-    buttons.append([{
-        'type': 'callback',
-        'text': '⬅️ Назад',
-        'payload': f'back_to_sub_list:{parent_value}'
-    }])
+    buttons.append([
+        {'type': 'callback', 'text': '⬅️ Назад', 'payload': f'back_to_sub_list:{parent_value}'},
+        {'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}
+    ])
     
     send_message(sender_id, response_text, buttons)
 
@@ -837,11 +848,11 @@ def finish_sub_questions(sender_id: str, session: dict):
     session.pop('sub_selections', None)
     save_session(str(sender_id), session)
     
-    # Предлагаем прикрепить фото дефекта
     response_text = '✅ Дефект зафиксирован!\n\nХотите прикрепить фото?'
     buttons = [
         [{'type': 'callback', 'text': '📸 Прикрепить фото', 'payload': 'add_photo'}],
-        [{'type': 'callback', 'text': '⏭ Пропустить', 'payload': 'skip_photo'}]
+        [{'type': 'callback', 'text': '⏭ Пропустить', 'payload': 'skip_photo'}],
+        [{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]
     ]
     send_message(sender_id, response_text, buttons)
 
@@ -889,13 +900,13 @@ def handle_checklist_answer(sender_id: str, session: dict, payload: str):
             send_message(sender_id, response_text)
             return
     
-    # Если выбран "Неисправно" без подпунктов - предлагаем фото
     if answer_value == 'bad':
         save_session(str(sender_id), session)
         response_text = '✅ Дефект зафиксирован!\n\nХотите прикрепить фото?'
         buttons = [
             [{'type': 'callback', 'text': '📸 Прикрепить фото', 'payload': 'add_photo'}],
-            [{'type': 'callback', 'text': '⏭ Пропустить', 'payload': 'skip_photo'}]
+            [{'type': 'callback', 'text': '⏭ Пропустить', 'payload': 'skip_photo'}],
+            [{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]
         ]
         send_message(sender_id, response_text, buttons)
         return
@@ -1403,10 +1414,11 @@ def send_priemka_question(sender_id: str, session: dict):
         session['waiting_for_photo'] = True
         save_session(str(sender_id), session)
         response_text = f'{progress_text}\n\n📸 Прикрепите фото.'
-        buttons = []
+        nav_buttons = []
         if question_index > 0:
-            buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}])
-        send_message(sender_id, response_text, buttons if buttons else None)
+            nav_buttons.append({'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'})
+        nav_buttons.append({'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'})
+        send_message(sender_id, response_text, [nav_buttons])
 
     elif q_type == 'choice':
         session['waiting_for_photo'] = question.get('allow_photo', False)
@@ -1422,8 +1434,11 @@ def send_priemka_question(sender_id: str, session: dict):
                 'text': opt['label'],
                 'payload': f"priemka_answer:{question['id']}:{opt['value']}"
             }])
+        nav_buttons = []
         if question_index > 0:
-            buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}])
+            nav_buttons.append({'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'})
+        nav_buttons.append({'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'})
+        buttons.append(nav_buttons)
         send_message(sender_id, response_text, buttons)
 
     elif q_type == 'text_choice':
@@ -1437,8 +1452,11 @@ def send_priemka_question(sender_id: str, session: dict):
                 'text': opt['label'],
                 'payload': f"priemka_answer:{question['id']}:{opt['value']}"
             }])
+        nav_buttons = []
         if question_index > 0:
-            buttons.append([{'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'}])
+            nav_buttons.append({'type': 'callback', 'text': '⬅️ Назад', 'payload': 'priemka_back'})
+        nav_buttons.append({'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'})
+        buttons.append(nav_buttons)
         send_message(sender_id, progress_text, buttons)
 
 
