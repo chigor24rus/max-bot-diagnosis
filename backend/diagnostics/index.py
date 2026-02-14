@@ -30,10 +30,10 @@ def handler(event: dict, context) -> dict:
         
         if method == 'POST':
             body = json.loads(event.get('body', '{}'))
-            mechanic = body.get('mechanic')
-            car_number = body.get('carNumber')
+            mechanic = (body.get('mechanic') or '').strip()
+            car_number = (body.get('carNumber') or '').strip()
             mileage = body.get('mileage')
-            diagnostic_type = body.get('diagnosticType')
+            diagnostic_type = (body.get('diagnosticType') or '').strip()
             checklist_answers = body.get('checklistAnswers', [])
             
             if not all([mechanic, car_number, mileage, diagnostic_type]):
