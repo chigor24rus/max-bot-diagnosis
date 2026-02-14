@@ -212,8 +212,12 @@ def handle_message(update: dict):
         if attachments:
             handle_photo_upload(sender_id, session, attachments, user_text)
         else:
-            response_text = '⚠️ Пожалуйста, прикрепите фото дефекта или нажмите "Пропустить фото".'
-            buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
+            if session.get('photo_required'):
+                response_text = '⚠️ Пожалуйста, прикрепите фото (обязательно для пункта «Другое»).'
+                buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+            else:
+                response_text = '⚠️ Пожалуйста, прикрепите фото дефекта или нажмите "Пропустить фото".'
+                buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
             send_message(sender_id, response_text, buttons)
         return
     
@@ -530,13 +534,14 @@ def handle_callback(update: dict):
         send_message(sender_id, response_text, buttons)
     
     elif payload == 'skip_photo':
-        # Пропуск фото
+        if session.get('photo_required'):
+            response_text = '⚠️ Фото обязательно для пункта «Другое (см. фото)». Прикрепите фото.'
+            buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+            send_message(sender_id, response_text, buttons)
+            return
         session['waiting_for_photo'] = False
-        
-        # Переход к следующему вопросу
         session['question_index'] += 1
         save_session(str(sender_id), session)
-        
         send_checklist_question(sender_id, session)
     
     elif payload == 'previous_question':
@@ -932,19 +937,33 @@ def finish_sub_questions(sender_id: str, session: dict):
         send_message(sender_id, response_text)
         return
     
-    # Очищаем режим подвопросов
+    has_other_photo = False
+    main_sel = sub_selections.get('main', [])
+    if isinstance(main_sel, list) and 'other_photo' in main_sel:
+        has_other_photo = True
+    elif isinstance(main_sel, str) and main_sel == 'other_photo':
+        has_other_photo = True
+
     session.pop('sub_question_mode', None)
     session.pop('sub_question_path', None)
     session.pop('sub_selections', None)
-    save_session(str(sender_id), session)
-    
-    response_text = '✅ Дефект зафиксирован!\n\nХотите прикрепить фото?'
-    buttons = [
-        [{'type': 'callback', 'text': '📸 Прикрепить фото', 'payload': 'add_photo'}],
-        [{'type': 'callback', 'text': '⏭ Пропустить', 'payload': 'skip_photo'}],
-        [{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]
-    ]
-    send_message(sender_id, response_text, buttons)
+
+    if has_other_photo:
+        session['waiting_for_photo'] = True
+        session['photo_required'] = True
+        save_session(str(sender_id), session)
+        response_text = '✅ Дефект зафиксирован!\n\n📸 Прикрепите фото (обязательно для пункта «Другое»).'
+        buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+        send_message(sender_id, response_text, buttons)
+    else:
+        save_session(str(sender_id), session)
+        response_text = '✅ Дефект зафиксирован!\n\nХотите прикрепить фото?'
+        buttons = [
+            [{'type': 'callback', 'text': '📸 Прикрепить фото', 'payload': 'add_photo'}],
+            [{'type': 'callback', 'text': '⏭ Пропустить', 'payload': 'skip_photo'}],
+            [{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]
+        ]
+        send_message(sender_id, response_text, buttons)
 
 
 def handle_checklist_answer(sender_id: str, session: dict, payload: str):
@@ -1146,8 +1165,8 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list, captio
             db_pool.putconn(photo_conn)
         
         session['waiting_for_photo'] = False
+        session.pop('photo_required', None)
         
-        # Переход к следующему вопросу
         session['question_index'] += 1
         save_session(str(sender_id), session)
         
@@ -1158,8 +1177,12 @@ def handle_photo_upload(sender_id: str, session: dict, attachments: list, captio
         
     except Exception as e:
         print(f"[ERROR] Failed to upload photo: {str(e)}")
-        response_text = '⚠️ Ошибка при загрузке фото. Попробуйте ещё раз или пропустите.'
-        buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
+        if session.get('photo_required'):
+            response_text = '⚠️ Ошибка при загрузке фото. Попробуйте ещё раз (фото обязательно).'
+            buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+        else:
+            response_text = '⚠️ Ошибка при загрузке фото. Попробуйте ещё раз или пропустите.'
+            buttons = [[{'type': 'callback', 'text': '⏭ Пропустить фото', 'payload': 'skip_photo'}]]
         send_message(sender_id, response_text, buttons)
 
 
