@@ -1,12 +1,11 @@
 import json
 import os
-import re
 import boto3
 import psycopg2
 
 
 def handler(event: dict, context) -> dict:
-    '''Полная очистка хранилища: удаляет файлы и записи БД от несуществующих диагностик'''
+    '''Очистка хранилища: находит и удаляет файлы удалённых диагностик через head_object'''
 
     if event.get('httpMethod') == 'OPTIONS':
         return {
@@ -33,13 +32,20 @@ def handler(event: dict, context) -> dict:
 
     db_url = os.environ.get('DATABASE_URL')
     schema = os.environ.get('MAIN_DB_SCHEMA')
+    aws_key = os.environ.get('AWS_ACCESS_KEY_ID')
+    cdn_prefix = f"https://cdn.poehali.dev/projects/{aws_key}/bucket/"
 
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
 
     cur.execute(f"SELECT id FROM {schema}.diagnostics")
     existing_ids = set(row[0] for row in cur.fetchall())
-    print(f"[cleanup] existing diagnostic IDs: {existing_ids}")
+
+    cur.execute(f"SELECT last_value FROM {schema}.diagnostics_id_seq")
+    max_id = cur.fetchone()[0]
+
+    deleted_ids = set(range(1, max_id + 1)) - existing_ids
+    print(f"[cleanup] existing: {existing_ids}, max_id: {max_id}, deleted_ids: {deleted_ids}")
 
     s3 = boto3.client('s3',
         endpoint_url='https://bucket.poehali.dev',
@@ -47,59 +53,36 @@ def handler(event: dict, context) -> dict:
         aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
     )
 
-    all_s3_keys = []
     orphan_keys = []
     orphan_size = 0
 
-    for prefix in ['diagnostics/', 'reports/']:
-        print(f"[cleanup] listing S3 prefix: {prefix}")
-        try:
-            continuation_token = None
-            while True:
-                kwargs = {'Bucket': 'files', 'Prefix': prefix, 'MaxKeys': 1000}
-                if continuation_token:
-                    kwargs['ContinuationToken'] = continuation_token
+    cur.execute(f"SELECT photo_url FROM {schema}.diagnostic_photos")
+    all_photo_keys = set()
+    for row in cur.fetchall():
+        url = row[0]
+        if url and url.startswith(cdn_prefix):
+            all_photo_keys.add(url[len(cdn_prefix):])
 
-                resp = s3.list_objects_v2(**kwargs)
-                contents = resp.get('Contents', [])
-                print(f"[cleanup] list_objects_v2({prefix}): {len(contents)} objects, IsTruncated={resp.get('IsTruncated')}")
+    print(f"[cleanup] Total photo keys in DB: {len(all_photo_keys)}")
 
-                for obj in contents:
-                    key = obj['Key']
-                    size = obj.get('Size', 0)
-                    all_s3_keys.append(key)
+    for diag_id in deleted_ids:
+        for suffix in ['', '_photos']:
+            key = f"reports/diagnostic_{diag_id}{suffix}.pdf"
+            size = _check_s3_key(s3, key)
+            if size is not None:
+                orphan_keys.append(key)
+                orphan_size += size
+                print(f"[cleanup] ORPHAN report: {key} ({size} bytes)")
 
-                    diag_id = _extract_diagnostic_id(key, prefix)
-                    if diag_id is not None and diag_id not in existing_ids:
-                        orphan_keys.append(key)
-                        orphan_size += size
-                        print(f"[cleanup] ORPHAN: {key} (diag_id={diag_id}, size={size})")
+        orphan_photo_keys = [k for k in all_photo_keys if k.startswith(f"diagnostics/{diag_id}/")]
+        for key in orphan_photo_keys:
+            size = _check_s3_key(s3, key)
+            if size is not None:
+                orphan_keys.append(key)
+                orphan_size += size
+                print(f"[cleanup] ORPHAN photo: {key} ({size} bytes)")
 
-                if resp.get('IsTruncated'):
-                    continuation_token = resp.get('NextContinuationToken')
-                else:
-                    break
-        except Exception as e:
-            print(f"[cleanup] list_objects_v2 failed for {prefix}: {e}")
-            try:
-                resp = s3.list_objects(Bucket='files', Prefix=prefix, MaxKeys=1000)
-                contents = resp.get('Contents', [])
-                print(f"[cleanup] list_objects({prefix}): {len(contents)} objects")
-                for obj in contents:
-                    key = obj['Key']
-                    size = obj.get('Size', 0)
-                    all_s3_keys.append(key)
-                    diag_id = _extract_diagnostic_id(key, prefix)
-                    if diag_id is not None and diag_id not in existing_ids:
-                        orphan_keys.append(key)
-                        orphan_size += size
-                        print(f"[cleanup] ORPHAN: {key} (diag_id={diag_id}, size={size})")
-            except Exception as e2:
-                print(f"[cleanup] list_objects also failed for {prefix}: {e2}")
-
-    print(f"[cleanup] Total S3 keys found: {len(all_s3_keys)}, orphans: {len(orphan_keys)}, orphan_size: {orphan_size}")
-    if all_s3_keys[:5]:
-        print(f"[cleanup] Sample keys: {all_s3_keys[:5]}")
+    print(f"[cleanup] Total orphan files: {len(orphan_keys)}, size: {orphan_size}")
 
     cur.execute(
         f"SELECT DISTINCT diagnostic_id FROM {schema}.diagnostic_photos "
@@ -124,6 +107,7 @@ def handler(event: dict, context) -> dict:
             try:
                 s3.delete_object(Bucket='files', Key=key)
                 deleted_files += 1
+                print(f"[cleanup] DELETED: {key}")
             except Exception as e:
                 print(f"[cleanup] Failed to delete {key}: {e}")
 
@@ -138,7 +122,6 @@ def handler(event: dict, context) -> dict:
             deleted_db += cur.rowcount
 
         conn.commit()
-        print(f"[cleanup] Deleted {deleted_files} files, {deleted_db} DB records")
 
     cur.close()
     conn.close()
@@ -156,29 +139,18 @@ def handler(event: dict, context) -> dict:
             'orphanSizeFormatted': _format_size(orphan_size),
             'orphanDbRecords': orphan_db_records,
             'deletedFiles': deleted_files,
-            'deletedDbRecords': deleted_db,
-            'totalS3Keys': len(all_s3_keys)
+            'deletedDbRecords': deleted_db
         }),
         'isBase64Encoded': False
     }
 
 
-def _extract_diagnostic_id(key, prefix):
-    if prefix == 'diagnostics/':
-        parts = key.split('/')
-        if len(parts) >= 2:
-            try:
-                return int(parts[1])
-            except (ValueError, IndexError):
-                return None
-    elif prefix == 'reports/':
-        m = re.search(r'diagnostic_(\d+)', key)
-        if m:
-            try:
-                return int(m.group(1))
-            except ValueError:
-                return None
-    return None
+def _check_s3_key(s3, key):
+    try:
+        resp = s3.head_object(Bucket='files', Key=key)
+        return resp.get('ContentLength', 0)
+    except Exception:
+        return None
 
 
 def _format_size(bytes_val):
