@@ -294,8 +294,8 @@ const DiagnosticsManager = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Все механики</SelectItem>
-                      {[...new Set(diagnostics.map(d => d.mechanic).filter(Boolean))].map(name => (
-                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      {[...new Set(diagnostics.map(d => d.mechanic).filter(v => v && String(v).trim()))].map(name => (
+                        <SelectItem key={name} value={String(name)}>{name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -309,8 +309,8 @@ const DiagnosticsManager = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Все типы</SelectItem>
-                      {[...new Set(diagnostics.map(d => d.diagnosticType).filter(Boolean))].map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      {[...new Set(diagnostics.map(d => d.diagnosticType).filter(v => v && String(v).trim()))].map(type => (
+                        <SelectItem key={type} value={String(type)}>{type}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
