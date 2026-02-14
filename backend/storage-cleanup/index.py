@@ -2,10 +2,11 @@ import json
 import os
 import boto3
 import psycopg2
+from datetime import datetime, timedelta
 
 
 def handler(event: dict, context) -> dict:
-    '''Очистка хранилища: находит и удаляет файлы удалённых диагностик через head_object'''
+    '''Очистка хранилища: удаляет файлы осиротевших диагностик через проверку по известным URL и перебор дат'''
 
     if event.get('httpMethod') == 'OPTIONS':
         return {
@@ -45,7 +46,7 @@ def handler(event: dict, context) -> dict:
     max_id = cur.fetchone()[0]
 
     deleted_ids = set(range(1, max_id + 1)) - existing_ids
-    print(f"[cleanup] existing: {existing_ids}, max_id: {max_id}, deleted_ids: {deleted_ids}")
+    print(f"[cleanup] existing: {len(existing_ids)} IDs, max_id: {max_id}, deleted_ids: {len(deleted_ids)} IDs to check")
 
     s3 = boto3.client('s3',
         endpoint_url='https://bucket.poehali.dev',
@@ -56,31 +57,61 @@ def handler(event: dict, context) -> dict:
     orphan_keys = []
     orphan_size = 0
 
-    cur.execute(f"SELECT photo_url FROM {schema}.diagnostic_photos")
-    all_photo_keys = set()
+    cur.execute(f"SELECT diagnostic_id, photo_url FROM {schema}.diagnostic_photos")
     for row in cur.fetchall():
-        url = row[0]
-        if url and url.startswith(cdn_prefix):
-            all_photo_keys.add(url[len(cdn_prefix):])
-
-    print(f"[cleanup] Total photo keys in DB: {len(all_photo_keys)}")
-
-    for diag_id in deleted_ids:
-        for suffix in ['', '_photos']:
-            key = f"reports/diagnostic_{diag_id}{suffix}.pdf"
+        diag_id = row[0]
+        url = row[1]
+        if diag_id not in existing_ids and url and url.startswith(cdn_prefix):
+            key = url[len(cdn_prefix):]
             size = _check_s3_key(s3, key)
             if size is not None:
                 orphan_keys.append(key)
                 orphan_size += size
-                print(f"[cleanup] ORPHAN report: {key} ({size} bytes)")
+                print(f"[cleanup] ORPHAN photo from DB: {key} ({size} bytes)")
 
-        orphan_photo_keys = [k for k in all_photo_keys if k.startswith(f"diagnostics/{diag_id}/")]
-        for key in orphan_photo_keys:
-            size = _check_s3_key(s3, key)
-            if size is not None:
-                orphan_keys.append(key)
-                orphan_size += size
-                print(f"[cleanup] ORPHAN photo: {key} ({size} bytes)")
+    if deleted_ids:
+        ids_list = list(deleted_ids)
+        cur.execute(f"SELECT id, report_url, report_with_photos_url FROM {schema}.diagnostics WHERE id IN ({','.join(str(i) for i in ids_list)})")
+    else:
+        cur.execute(f"SELECT id, report_url, report_with_photos_url FROM {schema}.diagnostics WHERE FALSE")
+    for row in cur.fetchall():
+        for url in [row[1], row[2]]:
+            if url and url.startswith(cdn_prefix):
+                key = url[len(cdn_prefix):]
+                size = _check_s3_key(s3, key)
+                if size is not None:
+                    orphan_keys.append(key)
+                    orphan_size += size
+                    print(f"[cleanup] ORPHAN report from DB: {key} ({size} bytes)")
+
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=60)
+    
+    scan_limit = min(len(deleted_ids), 5)
+    scanned_count = 0
+    for diag_id in sorted(deleted_ids, reverse=True):
+        if scanned_count >= scan_limit:
+            break
+        print(f"[cleanup] Checking reports for deleted diagnostic {diag_id} (date range scan)")
+        current_date = start_date
+        found_count = 0
+        while current_date <= end_date and found_count < 3:
+            date_str = current_date.strftime('%Y%m%d')
+            for hour in range(0, 24, 12):
+                for minute in [0, 30]:
+                    time_str = f"{hour:02d}{minute:02d}"
+                    for suffix in ['', '_with_photos']:
+                        for second in [0, 30]:
+                            key = f"reports/diagnostic_{diag_id}{suffix}_{date_str}_{time_str}{second:02d}.pdf"
+                            size = _check_s3_key(s3, key)
+                            if size is not None:
+                                if key not in orphan_keys:
+                                    orphan_keys.append(key)
+                                    orphan_size += size
+                                    found_count += 1
+                                    print(f"[cleanup] ORPHAN report by scan: {key} ({size} bytes)")
+            current_date += timedelta(days=1)
+        scanned_count += 1
 
     print(f"[cleanup] Total orphan files: {len(orphan_keys)}, size: {orphan_size}")
 
@@ -97,7 +128,7 @@ def handler(event: dict, context) -> dict:
     orphan_answer_diag_ids = set(row[0] for row in cur.fetchall())
 
     orphan_db_records = len(orphan_photo_diag_ids) + len(orphan_answer_diag_ids)
-    print(f"[cleanup] Orphan DB photo_diags: {orphan_photo_diag_ids}, answer_diags: {orphan_answer_diag_ids}")
+    print(f"[cleanup] Orphan DB records: {orphan_db_records}")
 
     deleted_files = 0
     deleted_db = 0

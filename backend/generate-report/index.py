@@ -534,6 +534,10 @@ def handler(event: dict, context) -> dict:
         
         cdn_url = f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{file_key}"
         
+        url_column = 'report_with_photos_url' if with_photos else 'report_url'
+        cur.execute(f"UPDATE {schema}.diagnostics SET {url_column} = '{cdn_url}' WHERE id = {diagnostic_id}")
+        conn.commit()
+        
         return {
             'statusCode': 200,
             'headers': {

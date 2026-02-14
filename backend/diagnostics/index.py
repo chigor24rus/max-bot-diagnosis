@@ -119,6 +119,13 @@ def handler(event: dict, context) -> dict:
             )
             photo_rows = cur.fetchall()
 
+            cur.execute(
+                f"SELECT report_url, report_with_photos_url FROM {schema}.diagnostics WHERE id = {diagnostic_id}"
+            )
+            diag_row = cur.fetchone()
+            report_url = diag_row[0] if diag_row else None
+            report_with_photos_url = diag_row[1] if diag_row else None
+
             s3 = boto3.client('s3',
                 endpoint_url='https://bucket.poehali.dev',
                 aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
@@ -127,43 +134,29 @@ def handler(event: dict, context) -> dict:
             aws_key = os.environ.get('AWS_ACCESS_KEY_ID')
             cdn_prefix = f"https://cdn.poehali.dev/projects/{aws_key}/bucket/"
 
-            deleted_photo_count = 0
+            deleted_count = 0
             for row in photo_rows:
                 url = row[0]
                 if url and url.startswith(cdn_prefix):
                     s3_key = url[len(cdn_prefix):]
                     try:
                         s3.delete_object(Bucket='files', Key=s3_key)
-                        deleted_photo_count += 1
+                        deleted_count += 1
                         print(f"[delete] Deleted photo: {s3_key}")
                     except Exception as e:
                         print(f"[delete] Failed to delete photo {s3_key}: {e}")
 
-            try:
-                objects = s3.list_objects_v2(Bucket='files', Prefix=f"diagnostics/{diagnostic_id}/")
-                if 'Contents' in objects:
-                    print(f"[delete] Found {len(objects['Contents'])} files in diagnostics/{diagnostic_id}/")
-                    for obj in objects['Contents']:
-                        s3.delete_object(Bucket='files', Key=obj['Key'])
-                        print(f"[delete] Deleted: {obj['Key']}")
-                else:
-                    print(f"[delete] No files found in diagnostics/{diagnostic_id}/")
-            except Exception as e:
-                print(f"[delete] list_objects_v2 failed for diagnostics/{diagnostic_id}/: {e}")
+            for url in [report_url, report_with_photos_url]:
+                if url and url.startswith(cdn_prefix):
+                    s3_key = url[len(cdn_prefix):]
+                    try:
+                        s3.delete_object(Bucket='files', Key=s3_key)
+                        deleted_count += 1
+                        print(f"[delete] Deleted report: {s3_key}")
+                    except Exception as e:
+                        print(f"[delete] Failed to delete report {s3_key}: {e}")
 
-            try:
-                objects = s3.list_objects_v2(Bucket='files', Prefix=f"reports/diagnostic_{diagnostic_id}")
-                if 'Contents' in objects:
-                    print(f"[delete] Found {len(objects['Contents'])} reports for diagnostic_{diagnostic_id}")
-                    for obj in objects['Contents']:
-                        s3.delete_object(Bucket='files', Key=obj['Key'])
-                        print(f"[delete] Deleted report: {obj['Key']}")
-                else:
-                    print(f"[delete] No reports found for diagnostic_{diagnostic_id}")
-            except Exception as e:
-                print(f"[delete] list_objects_v2 failed for reports/diagnostic_{diagnostic_id}: {e}")
-
-            print(f"[delete] Deleted {deleted_photo_count} photos from DB URLs")
+            print(f"[delete] Total deleted from S3: {deleted_count} files")
 
             cur.execute(f"DELETE FROM {schema}.diagnostic_photos WHERE diagnostic_id = {diagnostic_id}")
             cur.execute(f"DELETE FROM {schema}.checklist_answers WHERE diagnostic_id = {diagnostic_id}")
