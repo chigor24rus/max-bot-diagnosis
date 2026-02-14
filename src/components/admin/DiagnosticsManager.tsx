@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -288,32 +288,30 @@ const DiagnosticsManager = ({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Механик:</label>
-                  <Select value={filterMechanic} onValueChange={setFilterMechanic}>
-                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Все механики</SelectItem>
-                      {[...new Set(diagnostics.map(d => d.mechanic).filter(v => v && String(v).trim()))].map(name => (
-                        <SelectItem key={name} value={String(name)}>{name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    value={filterMechanic}
+                    onChange={(e) => setFilterMechanic(e.target.value)}
+                    className="flex h-10 w-full rounded-md border px-3 py-2 text-sm bg-slate-900 border-slate-700 text-white"
+                  >
+                    <option value="all">Все механики</option>
+                    {[...new Set(diagnostics.map(d => d.mechanic).filter(v => v && String(v).trim()))].map(name => (
+                      <option key={String(name)} value={String(name)}>{name}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">Тип:</label>
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger className="bg-slate-900 border-slate-700 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Все типы</SelectItem>
-                      {[...new Set(diagnostics.map(d => d.diagnosticType).filter(v => v && String(v).trim()))].map(type => (
-                        <SelectItem key={type} value={String(type)}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="flex h-10 w-full rounded-md border px-3 py-2 text-sm bg-slate-900 border-slate-700 text-white"
+                  >
+                    <option value="all">Все типы</option>
+                    {[...new Set(diagnostics.map(d => d.diagnosticType).filter(v => v && String(v).trim()))].map(type => (
+                      <option key={String(type)} value={String(type)}>{type}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -350,17 +348,16 @@ const DiagnosticsManager = ({
                     <div>
                       Показано {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredDiagnostics.length)} из {filteredDiagnostics.length}
                     </div>
-                    <Select value={itemsPerPage.toString()} onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
-                      <SelectTrigger className="w-32 h-8 bg-slate-900 border-slate-700 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="25">25 на странице</SelectItem>
-                        <SelectItem value="50">50 на странице</SelectItem>
-                        <SelectItem value="100">100 на странице</SelectItem>
-                        <SelectItem value="200">200 на странице</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <select
+                      value={itemsPerPage.toString()}
+                      onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                      className="w-32 h-8 rounded-md border px-2 text-sm bg-slate-900 border-slate-700 text-white"
+                    >
+                      <option value="25">25 на стр.</option>
+                      <option value="50">50 на стр.</option>
+                      <option value="100">100 на стр.</option>
+                      <option value="200">200 на стр.</option>
+                    </select>
                   </div>
                   {paginatedDiagnostics.map((diagnostic) => (
                     <div key={diagnostic.id} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
