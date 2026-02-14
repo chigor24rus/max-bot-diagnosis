@@ -57,7 +57,7 @@ const MechanicsManager = () => {
       if (!response.ok) throw new Error('Ошибка загрузки');
 
       const data = await response.json();
-      setMechanics(data);
+      setMechanics(Array.isArray(data) ? data : []);
     } catch (error) {
       toast({
         title: 'Ошибка',

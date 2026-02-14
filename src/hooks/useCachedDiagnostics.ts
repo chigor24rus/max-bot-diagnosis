@@ -76,10 +76,11 @@ export const useCachedDiagnostics = () => {
       if (!response.ok) throw new Error('Ошибка загрузки');
 
       const data = await response.json();
+      const safeData = Array.isArray(data) ? data : [];
       const etag = response.headers.get('ETag') || undefined;
       
-      setDiagnostics(data);
-      saveToCache(data, etag);
+      setDiagnostics(safeData);
+      saveToCache(safeData, etag);
     } catch (err: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       if (err.name === 'AbortError') {
         return;

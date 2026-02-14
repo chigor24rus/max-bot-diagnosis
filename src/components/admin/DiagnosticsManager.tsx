@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 
 interface DiagnosticsManagerProps {
-  diagnostics: any[];
+  diagnostics: Record<string, string | number>[];
   onReload: () => void;
   loading?: boolean;
   isCached?: boolean;
@@ -294,7 +294,7 @@ const DiagnosticsManager = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Все механики</SelectItem>
-                      {[...new Set(diagnostics.map(d => d.mechanic))].map(name => (
+                      {[...new Set(diagnostics.map(d => d.mechanic).filter(Boolean))].map(name => (
                         <SelectItem key={name} value={name}>{name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -309,7 +309,7 @@ const DiagnosticsManager = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Все типы</SelectItem>
-                      {[...new Set(diagnostics.map(d => d.diagnosticType))].map(type => (
+                      {[...new Set(diagnostics.map(d => d.diagnosticType).filter(Boolean))].map(type => (
                         <SelectItem key={type} value={type}>{type}</SelectItem>
                       ))}
                     </SelectContent>
@@ -377,7 +377,7 @@ const DiagnosticsManager = ({
                           <div className="text-sm text-slate-300">
                             <div>Механик: <span className="text-white font-medium">{diagnostic.mechanic}</span></div>
                             <div>Автомобиль: <span className="text-white font-medium">{diagnostic.carNumber}</span></div>
-                            <div>Пробег: <span className="text-white font-medium">{diagnostic.mileage.toLocaleString()} км</span></div>
+                            <div>Пробег: <span className="text-white font-medium">{(diagnostic.mileage || 0).toLocaleString()} км</span></div>
                           </div>
                         </div>
                         <Button
