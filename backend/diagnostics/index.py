@@ -161,7 +161,7 @@ def handler(event: dict, context) -> dict:
                 limit = query_params.get('limit', '50')
                 cur.execute(
                     f"SELECT id, mechanic, car_number, mileage, diagnostic_type, created_at "
-                    f"FROM {schema}.diagnostics ORDER BY created_at DESC LIMIT {limit}"
+                    f"FROM {schema}.diagnostics WHERE completed = true ORDER BY created_at DESC LIMIT {limit}"
                 )
                 rows = cur.fetchall()
                 

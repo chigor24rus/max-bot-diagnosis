@@ -87,7 +87,7 @@ def handler(event: dict, context) -> dict:
         
         cur.execute(
             f"SELECT id, mechanic, car_number, mileage, diagnostic_type, created_at "
-            f"FROM {schema}.diagnostics WHERE id = {diagnostic_id}"
+            f"FROM {schema}.diagnostics WHERE id = {diagnostic_id} AND completed = true"
         )
         row = cur.fetchone()
         
@@ -98,7 +98,7 @@ def handler(event: dict, context) -> dict:
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*'
                 },
-                'body': json.dumps({'error': 'Диагностика не найдена'}),
+                'body': json.dumps({'error': 'Диагностика не найдена или не завершена'}),
                 'isBase64Encoded': False
             }
         

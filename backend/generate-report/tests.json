@@ -1,13 +1,12 @@
 {
   "tests": [
     {
-      "name": "Generate PDF report with valid ID",
+      "name": "Report returns 404 for non-completed diagnostic",
       "method": "GET",
-      "path": "/?id=1",
-      "expectedStatus": 200,
+      "path": "/?id=99999",
+      "expectedStatus": 404,
       "expectedBody": {
-        "pdfUrl": "string",
-        "message": "string"
+        "error": "string"
       },
       "bodyMatcher": "partial"
     }

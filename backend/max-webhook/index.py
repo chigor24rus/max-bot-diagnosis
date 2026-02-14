@@ -687,6 +687,28 @@ def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
             get_db_pool().putconn(conn)
 
 
+def mark_diagnostic_completed(diagnostic_id: int):
+    '''Помечает диагностику как завершённую'''
+    conn = None
+    try:
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
+        cur = conn.cursor()
+        cur.execute(
+            f"UPDATE {schema}.diagnostics SET completed = true, updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+            (diagnostic_id,)
+        )
+        conn.commit()
+        cur.close()
+        print(f"[SUCCESS] Diagnostic {diagnostic_id} marked as completed")
+    except Exception as e:
+        print(f"[ERROR] Failed to mark diagnostic completed: {str(e)}")
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
+
+
 def update_diagnostic_mileage(diagnostic_id: int, mileage: int):
     '''Обновление пробега в существующей диагностике'''
     conn = None
@@ -1365,6 +1387,8 @@ def finish_checklist(sender_id: str, session: dict):
     diagnostic_id = session.get('diagnostic_id')
     report_url_base = "https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6"
     
+    mark_diagnostic_completed(diagnostic_id)
+    
     conn = None
     try:
         # Проверяем наличие фото в БД
@@ -1800,6 +1824,8 @@ def finish_priemka(sender_id: str, session: dict):
     '''Завершение Приемки и генерация отчёта'''
     diagnostic_id = session.get('diagnostic_id')
     report_url_base = "https://functions.poehali.dev/65879cb6-37f7-4a96-9bdc-04cfe5915ba6"
+
+    mark_diagnostic_completed(diagnostic_id)
 
     mechanic = session.get('mechanic', '—')
     car_number = session.get('car_number', '—')
