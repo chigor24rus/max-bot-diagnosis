@@ -179,10 +179,16 @@ def handle_message(update: dict):
     if lower_text in ['/cancel', 'отмена', '/отмена'] and session.get('step', 0) > 1:
         mechanic_id = session.get('mechanic_id')
         mechanic_name = session.get('mechanic', '')
-        session = {'step': 2, 'mechanic_id': mechanic_id, 'mechanic': mechanic_name}
+        session = {'step': 2, 'mechanic_id': mechanic_id, 'mechanic': mechanic_name, 'user_id': session.get('user_id'), 'user_name': session.get('user_name'), 'phone': session.get('phone')}
         save_session(str(sender_id), session)
-        response_text = f'❌ Диагностика отменена.\n\n{mechanic_name}, введите госномер автомобиля для новой диагностики.\n\nНапример: A159BK124'
-        send_message(sender_id, response_text)
+        response_text = f'❌ Диагностика отменена.\n\n{mechanic_name}, выберите тип диагностики:'
+        buttons = [
+            [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
+            [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
+            [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
+            [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}],
+        ]
+        send_message(sender_id, response_text, buttons)
         return
     
     # Обработка контакта для авторизации
@@ -232,13 +238,16 @@ def handle_message(update: dict):
     
     # Команды
     if lower_text in ['/start', 'начать', 'старт']:
-        # Проверяем, авторизован ли пользователь (проверка mechanic_id вместо user_id)
         if session.get('mechanic_id'):
-            # Уже авторизован - сразу начинаем диагностику с госномера
             session['step'] = 2
             save_session(str(sender_id), session)
-            response_text = f'👋 С возвращением, {session.get("mechanic", "")}!\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
-            buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+            response_text = f'👋 С возвращением, {session.get("mechanic", "")}!\n\nВыберите тип диагностики:'
+            buttons = [
+                [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
+                [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
+                [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
+                [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}],
+            ]
             send_message(sender_id, response_text, buttons)
         else:
             # Не авторизован - запрашиваем телефон
@@ -279,44 +288,103 @@ def handle_message(update: dict):
         send_message(sender_id, response_text, buttons)
     
     elif step == 2:
-        # Ввод госномера
+        response_text = 'Выберите тип диагностики из кнопок выше или введите /start.'
+        buttons = [
+            [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
+            [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
+            [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
+            [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}],
+        ]
+        send_message(sender_id, response_text, buttons)
+    
+    elif step == 3:
         clean_number = user_text.upper().replace(' ', '').replace('-', '')
-        
-        # Проверка на кириллицу
-        has_cyrillic = any('А' <= char <= 'Я' or 'а' <= char <= 'я' for char in clean_number)
+        has_cyrillic = any('\u0410' <= char <= '\u042f' or '\u0430' <= char <= '\u044f' for char in clean_number)
         
         if has_cyrillic:
-            response_text = '⚠️ Госномер должен содержать только латинские буквы.\n\nНапример: A159BK124 (не А159ВК124)'
+            response_text = '\u26a0\ufe0f \u0413\u043e\u0441\u043d\u043e\u043c\u0435\u0440 \u0434\u043e\u043b\u0436\u0435\u043d \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0442\u044c \u0442\u043e\u043b\u044c\u043a\u043e \u043b\u0430\u0442\u0438\u043d\u0441\u043a\u0438\u0435 \u0431\u0443\u043a\u0432\u044b.\n\n\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440: A159BK124 (\u043d\u0435 \u0410159\u0412\u041a124)'
             send_message(sender_id, response_text)
         elif len(clean_number) >= 5:
             session['car_number'] = clean_number
-            session['step'] = 3
-            save_session(str(sender_id), session)
-            response_text = f'✅ Госномер {clean_number} принят!\n\nТеперь введите пробег автомобиля (в км).\n\nНапример: 150000'
-            buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
-            send_message(sender_id, response_text, buttons)
+            diagnostic_type = session.get('diagnostic_type', '')
+            if diagnostic_type == 'priemka':
+                diagnostic_id = save_diagnostic(session)
+                if diagnostic_id:
+                    session.pop('waiting_for_photo', None)
+                    session.pop('waiting_for_text', None)
+                    session.pop('priemka_extra_photos', None)
+                    session['diagnostic_id'] = diagnostic_id
+                    session['question_index'] = 0
+                    session['step'] = 6
+                    save_session(str(sender_id), session)
+                    response_text = f'\u2705 \u0413\u043e\u0441\u043d\u043e\u043c\u0435\u0440 {clean_number} \u043f\u0440\u0438\u043d\u044f\u0442! \u041d\u0430\u0447\u0438\u043d\u0430\u0435\u043c \u041f\u0440\u0438\u0435\u043c\u043a\u0443.'
+                    send_message(sender_id, response_text)
+                    send_priemka_question(sender_id, session)
+                else:
+                    response_text = '\u274c \u041e\u0448\u0438\u0431\u043a\u0430 \u043f\u0440\u0438 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0438 \u0434\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0438. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0441\u043d\u043e\u0432\u0430 /start'
+                    send_message(sender_id, response_text)
+            else:
+                session['step'] = 4
+                save_session(str(sender_id), session)
+                response_text = f'\u2705 \u0413\u043e\u0441\u043d\u043e\u043c\u0435\u0440 {clean_number} \u043f\u0440\u0438\u043d\u044f\u0442!\n\n\u0422\u0435\u043f\u0435\u0440\u044c \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u043f\u0440\u043e\u0431\u0435\u0433 \u0430\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b\u044f (\u0432 \u043a\u043c).\n\n\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440: 150000'
+                buttons = [[{'type': 'callback', 'text': '\u274c \u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c', 'payload': 'cancel_diagnostic'}]]
+                send_message(sender_id, response_text, buttons)
         else:
-            response_text = '⚠️ Госномер слишком короткий.\n\nВведите корректный госномер (минимум 5 символов).\n\nНапример: A159BK124'
+            response_text = '\u26a0\ufe0f \u0413\u043e\u0441\u043d\u043e\u043c\u0435\u0440 \u0441\u043b\u0438\u0448\u043a\u043e\u043c \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0439.\n\n\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u044b\u0439 \u0433\u043e\u0441\u043d\u043e\u043c\u0435\u0440 (\u043c\u0438\u043d\u0438\u043c\u0443\u043c 5 \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432).\n\n\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440: A159BK124'
             send_message(sender_id, response_text)
     
-    elif step == 3:
-        # Ввод пробега
+    elif step == 4:
         mileage_str = ''.join(filter(str.isdigit, user_text))
         if mileage_str and int(mileage_str) > 0:
             session['mileage'] = int(mileage_str)
-            session['step'] = 4
             save_session(str(sender_id), session)
-            response_text = f'✅ Пробег {int(mileage_str):,} км принят!\n\nТеперь выберите тип диагностики:'.replace(',', ' ')
-            buttons = [
-                [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
-                [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
-                [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
-                [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}],
-                [{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]
-            ]
-            send_message(sender_id, response_text, buttons)
+            diagnostic_type = session.get('diagnostic_type', '')
+            if diagnostic_type == '5min':
+                diagnostic_id = save_diagnostic(session)
+                if diagnostic_id:
+                    session.pop('sub_question_mode', None)
+                    session.pop('sub_question_path', None)
+                    session.pop('sub_selections', None)
+                    session.pop('waiting_for_photo', None)
+                    session['diagnostic_id'] = diagnostic_id
+                    session['question_index'] = 0
+                    session['step'] = 5
+                    save_session(str(sender_id), session)
+                    response_text = f'\u2705 \u041f\u0440\u043e\u0431\u0435\u0433 {int(mileage_str):,} \u043a\u043c \u043f\u0440\u0438\u043d\u044f\u0442! \u041d\u0430\u0447\u0438\u043d\u0430\u0435\u043c 5-\u0442\u0438 \u043c\u0438\u043d\u0443\u0442\u043a\u0443.'.replace(',', ' ')
+                    send_message(sender_id, response_text)
+                    send_checklist_question(sender_id, session)
+                else:
+                    response_text = '\u274c \u041e\u0448\u0438\u0431\u043a\u0430 \u043f\u0440\u0438 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u0438 \u0434\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0438. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0441\u043d\u043e\u0432\u0430 /start'
+                    send_message(sender_id, response_text)
+            else:
+                type_labels = {'dhch': '\u0414\u0425\u0427', 'des': '\u0414\u042d\u0421'}
+                type_label = type_labels.get(diagnostic_type, diagnostic_type)
+                response_text = f'\ud83d\udea7 \u0420\u0430\u0437\u0434\u0435\u043b \u00ab{type_label}\u00bb \u0432 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0435.\n\n\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0434\u0440\u0443\u0433\u043e\u0439 \u0442\u0438\u043f \u0434\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0438 \u0438\u043b\u0438 \u043d\u0430\u0447\u043d\u0438\u0442\u0435 \u0437\u0430\u043d\u043e\u0432\u043e.'
+                buttons = [
+                    [{'type': 'callback', 'text': '\u2b05\ufe0f \u0412\u044b\u0431\u0440\u0430\u0442\u044c \u0434\u0440\u0443\u0433\u043e\u0439 \u0442\u0438\u043f', 'payload': 'back_to_type'}],
+                    [{'type': 'callback', 'text': '\u041d\u0430\u0447\u0430\u0442\u044c \u043d\u043e\u0432\u0443\u044e \u0434\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0443', 'payload': 'start'}]
+                ]
+                send_message(sender_id, response_text, buttons)
         else:
-            response_text = '⚠️ Пожалуйста, введите пробег цифрами.\n\nНапример: 150000'
+            response_text = '\u26a0\ufe0f \u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u043f\u0440\u043e\u0431\u0435\u0433 \u0446\u0438\u0444\u0440\u0430\u043c\u0438.\n\n\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440: 150000'
+            send_message(sender_id, response_text)
+    
+    elif step == 7:
+        mileage_str = ''.join(filter(str.isdigit, user_text))
+        if mileage_str and int(mileage_str) > 0:
+            session['mileage'] = int(mileage_str)
+            diagnostic_id = session.get('diagnostic_id')
+            if diagnostic_id:
+                update_diagnostic_mileage(diagnostic_id, int(mileage_str))
+            session['step'] = 6
+            session['waiting_for_photo'] = False
+            session['waiting_for_text'] = False
+            save_session(str(sender_id), session)
+            response_text = f'\u2705 \u041f\u0440\u043e\u0431\u0435\u0433 {int(mileage_str):,} \u043a\u043c \u043f\u0440\u0438\u043d\u044f\u0442! \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0435\u043c \u041f\u0440\u0438\u0435\u043c\u043a\u0443.'.replace(',', ' ')
+            send_message(sender_id, response_text)
+            send_priemka_question(sender_id, session)
+        else:
+            response_text = '\u26a0\ufe0f \u041f\u043e\u0436\u0430\u043b\u0443\u0439\u0441\u0442\u0430, \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u043f\u0440\u043e\u0431\u0435\u0433 \u0446\u0438\u0444\u0440\u0430\u043c\u0438.\n\n\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440: 150000'
             send_message(sender_id, response_text)
     
     else:
@@ -339,13 +407,16 @@ def handle_callback(update: dict):
     session = get_session(str(sender_id))
     
     if payload == 'start':
-        # Проверяем, авторизован ли пользователь (проверка mechanic_id)
         if session.get('mechanic_id'):
-            # Уже авторизован - сразу начинаем диагностику с госномера
             session['step'] = 2
             save_session(str(sender_id), session)
-            response_text = f'👋 Отлично! Введите госномер автомобиля.\n\nНапример: A159BK124'
-            buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+            response_text = f'👋 Отлично! Выберите тип диагностики:'
+            buttons = [
+                [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
+                [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
+                [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
+                [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}],
+            ]
             send_message(sender_id, response_text, buttons)
         else:
             # Не авторизован - запрашиваем телефон
@@ -360,60 +431,32 @@ def handle_callback(update: dict):
     elif payload.startswith('type:'):
         diagnostic_type = payload.replace('type:', '')
         session['diagnostic_type'] = diagnostic_type
+        session['step'] = 3
         save_session(str(sender_id), session)
         
-        if diagnostic_type == 'priemka':
-            diagnostic_id = save_diagnostic(session)
-            if diagnostic_id:
-                session.pop('waiting_for_photo', None)
-                session.pop('waiting_for_text', None)
-                session.pop('priemka_extra_photos', None)
-                
-                session['diagnostic_id'] = diagnostic_id
-                session['question_index'] = 0
-                session['step'] = 6
-                save_session(str(sender_id), session)
-                send_priemka_question(sender_id, session)
-            else:
-                response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
-                send_message(sender_id, response_text)
-        elif diagnostic_type == '5min':
-            diagnostic_id = save_diagnostic(session)
-            if diagnostic_id:
-                session.pop('sub_question_mode', None)
-                session.pop('sub_question_path', None)
-                session.pop('sub_selections', None)
-                session.pop('waiting_for_photo', None)
-                
-                session['diagnostic_id'] = diagnostic_id
-                session['question_index'] = 0
-                session['step'] = 5
-                save_session(str(sender_id), session)
-                send_checklist_question(sender_id, session)
-            else:
-                response_text = '❌ Ошибка при сохранении диагностики. Попробуйте снова /start'
-                send_message(sender_id, response_text)
-        else:
-            type_labels = {'dhch': 'ДХЧ', 'des': 'ДЭС'}
-            type_label = type_labels.get(diagnostic_type, diagnostic_type)
-            
-            response_text = f'🚧 Раздел «{type_label}» в разработке.\n\nВыберите другой тип диагностики или начните заново.'
-            buttons = [
-                [{'type': 'callback', 'text': '⬅️ Выбрать другой тип', 'payload': 'back_to_type'}],
-                [{'type': 'callback', 'text': 'Начать новую диагностику', 'payload': 'start'}]
-            ]
-            send_message(sender_id, response_text, buttons)
+        type_labels = {'priemka': 'Приемка', '5min': '5-ти минутка', 'dhch': 'ДХЧ', 'des': 'ДЭС'}
+        type_label = type_labels.get(diagnostic_type, diagnostic_type)
+        
+        response_text = f'✅ Тип: {type_label}\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
+        buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+        send_message(sender_id, response_text, buttons)
     
     elif payload == 'cancel_diagnostic':
         mechanic_id = session.get('mechanic_id')
         mechanic_name = session.get('mechanic', '')
         session = {'step': 2, 'mechanic_id': mechanic_id, 'mechanic': mechanic_name, 'user_id': session.get('user_id'), 'user_name': session.get('user_name'), 'phone': session.get('phone')}
         save_session(str(sender_id), session)
-        response_text = f'❌ Диагностика отменена.\n\n{mechanic_name}, введите госномер автомобиля для новой диагностики.\n\nНапример: A159BK124'
-        send_message(sender_id, response_text)
+        response_text = f'❌ Диагностика отменена.\n\n{mechanic_name}, выберите тип диагностики:'
+        buttons = [
+            [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
+            [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
+            [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
+            [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}],
+        ]
+        send_message(sender_id, response_text, buttons)
 
     elif payload == 'back_to_type':
-        session['step'] = 4
+        session['step'] = 2
         session.pop('diagnostic_type', None)
         save_session(str(sender_id), session)
         response_text = 'Выберите тип диагностики:'
@@ -422,7 +465,6 @@ def handle_callback(update: dict):
             [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
             [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
             [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}],
-            [{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]
         ]
         send_message(sender_id, response_text, buttons)
     
@@ -626,8 +668,13 @@ def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
         session['step'] = 2
         save_session(str(sender_id), session)
         
-        response_text = f'✅ Добро пожаловать, {mechanic_name}!\n\nВведите госномер автомобиля.\n\nНапример: A159BK124'
-        buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+        response_text = f'✅ Добро пожаловать, {mechanic_name}!\n\nВыберите тип диагностики:'
+        buttons = [
+            [{'type': 'callback', 'text': '📋 Приемка', 'payload': 'type:priemka'}],
+            [{'type': 'callback', 'text': '⏱ 5-ти минутка', 'payload': 'type:5min'}],
+            [{'type': 'callback', 'text': '🔩 ДХЧ', 'payload': 'type:dhch'}],
+            [{'type': 'callback', 'text': '⚡ ДЭС', 'payload': 'type:des'}],
+        ]
         send_message(sender_id, response_text, buttons)
         
     except Exception as e:
@@ -635,6 +682,27 @@ def handle_phone_auth(sender_id: str, session: dict, contact_attachment: dict):
         response_text = '⚠️ Ошибка авторизации. Попробуйте ещё раз или обратитесь к администратору.'
         buttons = [[{'type': 'request_contact', 'text': '📱 Отправить номер телефона'}]]
         send_message(sender_id, response_text, buttons)
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
+
+
+def update_diagnostic_mileage(diagnostic_id: int, mileage: int):
+    '''Обновление пробега в существующей диагностике'''
+    conn = None
+    try:
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
+        cur = conn.cursor()
+        cur.execute(
+            f"UPDATE {schema}.diagnostics SET mileage = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s",
+            (mileage, diagnostic_id)
+        )
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        print(f"[ERROR] Failed to update mileage: {str(e)}")
     finally:
         if conn:
             get_db_pool().putconn(conn)
@@ -1398,6 +1466,17 @@ def send_priemka_question(sender_id: str, session: dict):
         return
 
     question = questions[question_index]
+
+    prev_question = questions[question_index - 1] if question_index > 0 else None
+    if prev_question and prev_question['id'] == 19 and not session.get('mileage'):
+        session['step'] = 7
+        session['waiting_for_photo'] = False
+        session['waiting_for_text'] = False
+        save_session(str(sender_id), session)
+        response_text = '🛣 Введите пробег автомобиля (в км).\n\nНапример: 150000'
+        buttons = [[{'type': 'callback', 'text': '❌ Отменить', 'payload': 'cancel_diagnostic'}]]
+        send_message(sender_id, response_text, buttons)
+        return
 
     if question['id'] == 10 and session.get('skip_rear_right_door'):
         save_priemka_answer(session.get('diagnostic_id'), 10, question['title'], 'Не предусмотрено', None)
