@@ -1,0 +1,1 @@
+UPDATE t_p70271656_max_bot_diagnosis.diagnostics SET mechanic = 'Не указан', car_number = 'Не указан' WHERE id = 38 AND mechanic = '';

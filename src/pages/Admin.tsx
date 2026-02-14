@@ -70,13 +70,15 @@ const Admin = () => {
         <AdminHeader onLogout={handleLogout} />
         <WebhookManager webhookUrl={webhookUrl} setupUrl={setupUrl} />
         <MechanicsManager />
-        <DiagnosticsManager 
-          diagnostics={diagnostics} 
-          onReload={reload}
-          loading={loading}
-          isCached={isCached}
-          cacheAge={cacheAge}
-        />
+        <AdminErrorBoundary>
+          <DiagnosticsManager 
+            diagnostics={diagnostics} 
+            onReload={reload}
+            loading={loading}
+            isCached={isCached}
+            cacheAge={cacheAge}
+          />
+        </AdminErrorBoundary>
         <AdminInstructions />
       </div>
     </div>
