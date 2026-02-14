@@ -1829,14 +1829,45 @@ def save_priemka_answer(diagnostic_id: int, question_number: int, question_text:
             get_db_pool().putconn(conn)
 
 
+def delete_s3_file(file_key: str):
+    '''Удаляет файл из S3 по ключу'''
+    try:
+        s3 = boto3.client('s3',
+            endpoint_url='https://bucket.poehali.dev',
+            aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+        )
+        s3.delete_object(Bucket='files', Key=file_key)
+        print(f"[SUCCESS] Deleted S3 file: {file_key}")
+    except Exception as e:
+        print(f"[ERROR] Failed to delete S3 file {file_key}: {str(e)}")
+
+
+def extract_s3_key(cdn_url: str) -> str:
+    '''Извлекает ключ S3 из CDN URL'''
+    prefix = f"https://cdn.poehali.dev/projects/{os.environ.get('AWS_ACCESS_KEY_ID')}/bucket/"
+    if cdn_url and cdn_url.startswith(prefix):
+        return cdn_url[len(prefix):]
+    return None
+
+
 def delete_diagnostic_photos(diagnostic_id: int, question_index: int):
-    '''Удаляет фото диагностики по question_index'''
+    '''Удаляет фото диагностики по question_index (из S3 и БД)'''
     conn = None
     try:
         schema = os.environ.get('MAIN_DB_SCHEMA')
         db_pool = get_db_pool()
         conn = db_pool.getconn()
         cur = conn.cursor()
+        cur.execute(
+            f"SELECT photo_url FROM {schema}.diagnostic_photos WHERE diagnostic_id = %s AND question_index = %s",
+            (diagnostic_id, question_index)
+        )
+        rows = cur.fetchall()
+        for row in rows:
+            s3_key = extract_s3_key(row[0])
+            if s3_key:
+                delete_s3_file(s3_key)
         cur.execute(
             f"DELETE FROM {schema}.diagnostic_photos WHERE diagnostic_id = %s AND question_index = %s",
             (diagnostic_id, question_index)

@@ -1,6 +1,7 @@
 import json
 import os
 import psycopg2
+import boto3
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -113,6 +114,45 @@ def handler(event: dict, context) -> dict:
                     'isBase64Encoded': False
                 }
             
+            cur.execute(
+                f"SELECT photo_url FROM {schema}.diagnostic_photos WHERE diagnostic_id = {diagnostic_id}"
+            )
+            photo_rows = cur.fetchall()
+
+            s3 = boto3.client('s3',
+                endpoint_url='https://bucket.poehali.dev',
+                aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+            )
+            aws_key = os.environ.get('AWS_ACCESS_KEY_ID')
+            cdn_prefix = f"https://cdn.poehali.dev/projects/{aws_key}/bucket/"
+
+            for row in photo_rows:
+                url = row[0]
+                if url and url.startswith(cdn_prefix):
+                    s3_key = url[len(cdn_prefix):]
+                    try:
+                        s3.delete_object(Bucket='files', Key=s3_key)
+                    except Exception:
+                        pass
+
+            try:
+                objects = s3.list_objects_v2(Bucket='files', Prefix=f"diagnostics/{diagnostic_id}/")
+                if 'Contents' in objects:
+                    for obj in objects['Contents']:
+                        s3.delete_object(Bucket='files', Key=obj['Key'])
+            except Exception:
+                pass
+
+            try:
+                objects = s3.list_objects_v2(Bucket='files', Prefix=f"reports/diagnostic_{diagnostic_id}")
+                if 'Contents' in objects:
+                    for obj in objects['Contents']:
+                        s3.delete_object(Bucket='files', Key=obj['Key'])
+            except Exception:
+                pass
+
+            cur.execute(f"DELETE FROM {schema}.diagnostic_photos WHERE diagnostic_id = {diagnostic_id}")
             cur.execute(f"DELETE FROM {schema}.checklist_answers WHERE diagnostic_id = {diagnostic_id}")
             cur.execute(f"DELETE FROM {schema}.diagnostics WHERE id = {diagnostic_id}")
             conn.commit()
