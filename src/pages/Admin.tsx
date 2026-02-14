@@ -6,6 +6,7 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import WebhookManager from '@/components/admin/WebhookManager';
 import DiagnosticsManager from '@/components/admin/DiagnosticsManager';
 import AdminInstructions from '@/components/admin/AdminInstructions';
+import StorageInfo from '@/components/admin/StorageInfo';
 import MechanicsManager from '@/components/MechanicsManager';
 
 class AdminErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean; error: string}> {
@@ -70,6 +71,7 @@ const Admin = () => {
         <AdminHeader onLogout={handleLogout} />
         <WebhookManager webhookUrl={webhookUrl} setupUrl={setupUrl} />
         <MechanicsManager />
+        <StorageInfo />
         <AdminErrorBoundary>
           <DiagnosticsManager 
             diagnostics={diagnostics} 

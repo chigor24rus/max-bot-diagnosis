@@ -16,6 +16,7 @@ type Diagnostic = {
 };
 
 const diagnosticTypeLabels: Record<string, string> = {
+  'priemka': 'Приемка',
   '5min': '5-ти минутка',
   'dhch': 'ДХЧ',
   'des': 'ДЭС'

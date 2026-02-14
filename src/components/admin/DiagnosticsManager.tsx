@@ -8,6 +8,13 @@ import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
 
+const diagnosticTypeLabels: Record<string, string> = {
+  'priemka': 'Приемка',
+  '5min': '5-ти минутка',
+  'dhch': 'ДХЧ',
+  'des': 'ДЭС'
+};
+
 interface DiagnosticsManagerProps {
   diagnostics: Record<string, string | number>[];
   onReload: () => void;
@@ -309,7 +316,7 @@ const DiagnosticsManager = ({
                   >
                     <option value="all">Все типы</option>
                     {[...new Set(diagnostics.map(d => d.diagnosticType).filter(v => v && String(v).trim()))].map(type => (
-                      <option key={String(type)} value={String(type)}>{type}</option>
+                      <option key={String(type)} value={String(type)}>{diagnosticTypeLabels[String(type)] || type}</option>
                     ))}
                   </select>
                 </div>
@@ -365,7 +372,7 @@ const DiagnosticsManager = ({
                         <div className="flex-1 space-y-2">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                              {diagnostic.diagnosticType}
+                              {diagnosticTypeLabels[diagnostic.diagnosticType as string] || diagnostic.diagnosticType}
                             </Badge>
                             <span className="text-xs text-slate-500">
                               {new Date(diagnostic.createdAt).toLocaleString('ru-RU')}
