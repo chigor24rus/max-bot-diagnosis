@@ -39,6 +39,7 @@ def handler(event: dict, context) -> dict:
 
     cur.execute(f"SELECT id FROM {schema}.diagnostics")
     existing_ids = set(row[0] for row in cur.fetchall())
+    print(f"[cleanup] existing diagnostic IDs: {existing_ids}")
 
     s3 = boto3.client('s3',
         endpoint_url='https://bucket.poehali.dev',
@@ -46,20 +47,59 @@ def handler(event: dict, context) -> dict:
         aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
     )
 
+    all_s3_keys = []
     orphan_keys = []
     orphan_size = 0
 
-    paginator = s3.get_paginator('list_objects_v2')
     for prefix in ['diagnostics/', 'reports/']:
-        for page in paginator.paginate(Bucket='files', Prefix=prefix):
-            for obj in page.get('Contents', []):
-                key = obj['Key']
-                size = obj.get('Size', 0)
+        print(f"[cleanup] listing S3 prefix: {prefix}")
+        try:
+            continuation_token = None
+            while True:
+                kwargs = {'Bucket': 'files', 'Prefix': prefix, 'MaxKeys': 1000}
+                if continuation_token:
+                    kwargs['ContinuationToken'] = continuation_token
 
-                diag_id = _extract_diagnostic_id(key, prefix)
-                if diag_id is not None and diag_id not in existing_ids:
-                    orphan_keys.append(key)
-                    orphan_size += size
+                resp = s3.list_objects_v2(**kwargs)
+                contents = resp.get('Contents', [])
+                print(f"[cleanup] list_objects_v2({prefix}): {len(contents)} objects, IsTruncated={resp.get('IsTruncated')}")
+
+                for obj in contents:
+                    key = obj['Key']
+                    size = obj.get('Size', 0)
+                    all_s3_keys.append(key)
+
+                    diag_id = _extract_diagnostic_id(key, prefix)
+                    if diag_id is not None and diag_id not in existing_ids:
+                        orphan_keys.append(key)
+                        orphan_size += size
+                        print(f"[cleanup] ORPHAN: {key} (diag_id={diag_id}, size={size})")
+
+                if resp.get('IsTruncated'):
+                    continuation_token = resp.get('NextContinuationToken')
+                else:
+                    break
+        except Exception as e:
+            print(f"[cleanup] list_objects_v2 failed for {prefix}: {e}")
+            try:
+                resp = s3.list_objects(Bucket='files', Prefix=prefix, MaxKeys=1000)
+                contents = resp.get('Contents', [])
+                print(f"[cleanup] list_objects({prefix}): {len(contents)} objects")
+                for obj in contents:
+                    key = obj['Key']
+                    size = obj.get('Size', 0)
+                    all_s3_keys.append(key)
+                    diag_id = _extract_diagnostic_id(key, prefix)
+                    if diag_id is not None and diag_id not in existing_ids:
+                        orphan_keys.append(key)
+                        orphan_size += size
+                        print(f"[cleanup] ORPHAN: {key} (diag_id={diag_id}, size={size})")
+            except Exception as e2:
+                print(f"[cleanup] list_objects also failed for {prefix}: {e2}")
+
+    print(f"[cleanup] Total S3 keys found: {len(all_s3_keys)}, orphans: {len(orphan_keys)}, orphan_size: {orphan_size}")
+    if all_s3_keys[:5]:
+        print(f"[cleanup] Sample keys: {all_s3_keys[:5]}")
 
     cur.execute(
         f"SELECT DISTINCT diagnostic_id FROM {schema}.diagnostic_photos "
@@ -74,6 +114,7 @@ def handler(event: dict, context) -> dict:
     orphan_answer_diag_ids = set(row[0] for row in cur.fetchall())
 
     orphan_db_records = len(orphan_photo_diag_ids) + len(orphan_answer_diag_ids)
+    print(f"[cleanup] Orphan DB photo_diags: {orphan_photo_diag_ids}, answer_diags: {orphan_answer_diag_ids}")
 
     deleted_files = 0
     deleted_db = 0
@@ -83,8 +124,8 @@ def handler(event: dict, context) -> dict:
             try:
                 s3.delete_object(Bucket='files', Key=key)
                 deleted_files += 1
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[cleanup] Failed to delete {key}: {e}")
 
         if orphan_photo_diag_ids:
             ids_str = ','.join(str(i) for i in orphan_photo_diag_ids)
@@ -97,6 +138,7 @@ def handler(event: dict, context) -> dict:
             deleted_db += cur.rowcount
 
         conn.commit()
+        print(f"[cleanup] Deleted {deleted_files} files, {deleted_db} DB records")
 
     cur.close()
     conn.close()
@@ -114,7 +156,8 @@ def handler(event: dict, context) -> dict:
             'orphanSizeFormatted': _format_size(orphan_size),
             'orphanDbRecords': orphan_db_records,
             'deletedFiles': deleted_files,
-            'deletedDbRecords': deleted_db
+            'deletedDbRecords': deleted_db,
+            'totalS3Keys': len(all_s3_keys)
         }),
         'isBase64Encoded': False
     }
