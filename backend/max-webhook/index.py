@@ -568,19 +568,25 @@ def handle_callback(update: dict):
                 if last_answer:
                     prev_question_number = last_answer[0]
                     
-                    # Удаляем этот ответ
                     cur.execute(
                         f"DELETE FROM {schema}.checklist_answers "
                         f"WHERE diagnostic_id = %s AND question_number = %s",
                         (diagnostic_id, prev_question_number)
                     )
-                    prev_conn.commit()
                     
-                    # Находим индекс этого вопроса
                     questions = get_checklist_questions()
                     prev_index = next((i for i, q in enumerate(questions) if q['id'] == prev_question_number), 0)
                     
+                    cur.execute(
+                        f"DELETE FROM {schema}.diagnostic_photos "
+                        f"WHERE diagnostic_id = %s AND question_index = %s",
+                        (diagnostic_id, prev_index)
+                    )
+                    prev_conn.commit()
+                    
                     session['question_index'] = prev_index
+                    session.pop('waiting_for_photo', None)
+                    session.pop('photo_required', None)
                     save_session(str(sender_id), session)
                     send_checklist_question(sender_id, session)
                 else:
@@ -1778,6 +1784,7 @@ def handle_priemka_back(sender_id: str, session: dict):
 
         if prev_question and diagnostic_id:
             delete_priemka_answer(diagnostic_id, prev_question['id'])
+            delete_diagnostic_photos(diagnostic_id, prev_index)
 
         session['question_index'] = prev_index
         session['waiting_for_photo'] = False
@@ -1817,6 +1824,28 @@ def save_priemka_answer(diagnostic_id: int, question_number: int, question_text:
     except Exception as e:
         print(f"[ERROR] Failed to save priemka answer: {str(e)}")
         return False
+    finally:
+        if conn:
+            get_db_pool().putconn(conn)
+
+
+def delete_diagnostic_photos(diagnostic_id: int, question_index: int):
+    '''Удаляет фото диагностики по question_index'''
+    conn = None
+    try:
+        schema = os.environ.get('MAIN_DB_SCHEMA')
+        db_pool = get_db_pool()
+        conn = db_pool.getconn()
+        cur = conn.cursor()
+        cur.execute(
+            f"DELETE FROM {schema}.diagnostic_photos WHERE diagnostic_id = %s AND question_index = %s",
+            (diagnostic_id, question_index)
+        )
+        conn.commit()
+        cur.close()
+        print(f"[SUCCESS] Deleted photos for diagnostic {diagnostic_id}, question_index {question_index}")
+    except Exception as e:
+        print(f"[ERROR] Failed to delete diagnostic photos: {str(e)}")
     finally:
         if conn:
             get_db_pool().putconn(conn)
